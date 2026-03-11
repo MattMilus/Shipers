@@ -170,9 +170,8 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="aeroplane.frag" />
-    <None Include="mandelbulb.frag" />
-    <None Include="shader.frag" />
+    <None Include="checker.frag" />
+    <None Include="wave.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

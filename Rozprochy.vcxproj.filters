@@ -20,11 +20,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="aeroplane.frag" />
-    <None Include="shader.frag">
+    <None Include="checker.frag">
       <Filter>Pliki źródłowe</Filter>
     </None>
-    <None Include="mandelbulb.frag">
+    <None Include="wave.frag">
       <Filter>Pliki źródłowe</Filter>
     </None>
   </ItemGroup>

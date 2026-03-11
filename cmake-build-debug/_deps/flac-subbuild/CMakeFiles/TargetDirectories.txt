@@ -1,0 +1,3 @@
+D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/CMakeFiles/flac-populate.dir
+D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/CMakeFiles/edit_cache.dir
+D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/CMakeFiles/rebuild_cache.dir

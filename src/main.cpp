@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cmath>
 
+#include "entities/Player.h"
+
 using namespace sf;
 
 Vector2f normalize(const Vector2f& source) {
@@ -32,57 +34,45 @@ int main() {
 	boatSprite.setScale({ 0.5f, 0.5f });
 	boatSprite.setOrigin({ boatTexture.getSize().x / 2.f, boatTexture.getSize().y / 2.f });
 
-    
-
-    // RenderTexture for the checkerboard (used as input to wave shader)
     RenderTexture renderTex(Vector2u{ 800, 600 });
-
     RectangleShape screenQuad(Vector2f{ 800.f, 600.f });
 
-    Vector2f boatPos{ 0.5f, 0.5f };
-    Vector2 boatSpeed = { 0.f, 0.f };
+    Player player({ 400.f, 300.f });
 
     Glsl::Vec2 uPathHistory[256];
     for (int i = 255; i >= 0; --i) {
-        uPathHistory[i] = boatPos;
+        uPathHistory[i] = Glsl::Vec2(0.5f, 0.5f);
     }
 
-    Clock clock;
+    Clock globalClock;
+    Clock deltaClock;
 
     checkerShader.setUniform("uResolution", Glsl::Vec2(800.f, 600.f));
     waveShader.setUniform("uResolution", Glsl::Vec2(800.f, 600.f));
 
-
     while (window.isOpen()) {
-        float time = clock.getElapsedTime().asSeconds();
+        float time = globalClock.getElapsedTime().asSeconds();
+        float deltaTime = deltaClock.restart().asSeconds();
 
         while (const auto event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>())
                 window.close();
         }
-        Vector2f oldBoatPos = boatPos;
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
-            boatPos.y += -0.003f;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
-            boatPos.y +=  0.003f;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
-            boatPos.x += -0.003f;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
-            boatPos.x +=  0.003f;
+        player.handleInput(deltaTime);
+        player.update(deltaTime);
 
-        // TODO: Fix this bullshit
-        boatSpeed = oldBoatPos - boatPos;
+        boatSprite.setPosition(player.getPosition());
+        boatSprite.setRotation(sf::degrees(player.getCurrentAngle()));
 
-        boatSprite.setPosition({ boatPos.x * 800.f, boatPos.y * 600.f });
-		Angle angle = radians(std::atan2(boatSpeed.y, boatSpeed.x) - 3.1415 / 2);
-		boatSprite.setRotation(angle);
 
-        uPathHistory[0] = boatPos;
         for (int i = 255; i > 0; --i) {
             uPathHistory[i] = uPathHistory[i - 1];
         }
 
+        // Normalizing player pos to [0, 1] range for shader
+        sf::Vector2f currentPos = player.getPosition();
+        uPathHistory[0] = Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
 
         renderTex.clear();
         renderTex.draw(screenQuad, &checkerShader);

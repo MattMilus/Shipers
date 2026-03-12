@@ -8,7 +8,7 @@ uniform vec2 uPathHistory[256];
 float speed = 0.3;
 float waveStrength = 0.03;
 
-float getStrength(float age, float dist) {
+float getOffset(float age, float dist) {
     float d = dist - age * speed;
     d = d * (1.0 - smoothstep(0.0, waveStrength, abs(d)));
     //d *= smoothstep(0.0, 0.15, age);        //intro
@@ -19,7 +19,7 @@ void main() {
     vec2 pos = gl_FragCoord.xy / uResolution;
     pos.y = 1.0 - pos.y; // visual fix
 
-    float x = sin(pos.y * 3.78 + uTime) * 0.05;
+    float x = sin(pos.y * 6.78 + uTime) * 0.05;
     float y = cos(pos.x * 3.78 + uTime) * 0.05;
     vec2 totalDir = vec2(0, 0);
     vec2 ambientWavesDir = vec2(x, y);
@@ -32,19 +32,20 @@ void main() {
         vec2 dir = pos - centre;
         float dist = length(dir);
         float age = float(i) / 255.0;
-        float wave = getStrength(age, dist);
+        float wave = getOffset(age, dist);
         float strength = 1.0 - age;
         dir = normalize(dir);
         totalDir += dir * wave * strength;
 
-        totalOffsets.r += getStrength(age, dist * 0.98) * strength;
-        totalOffsets.g += getStrength(age, dist)        * strength;
-        totalOffsets.b += getStrength(age, dist * 1.02) * strength;
+        totalOffsets.r += getOffset(age, dist * 0.98) * strength;
+        totalOffsets.g += getOffset(age, dist)        * strength;
+        totalOffsets.b += getOffset(age, dist * 1.02) * strength;
     }
 
-    float r = texture(image, pos + ambientWavesDir + totalDir * (2.0 + totalOffsets.r)).r;
-    float g = texture(image, pos + ambientWavesDir + totalDir * (2.0 + totalOffsets.g)).g;
-    float b = texture(image, pos + ambientWavesDir + totalDir * (1.0 + totalOffsets.b)).b;
+    // pseudo piana do poprawy
+    float r = texture(image, pos + ambientWavesDir + totalDir * (2.0 + totalOffsets.r)).r + abs(totalDir.x) * 5.0;
+    float g = texture(image, pos + ambientWavesDir + totalDir * (2.0 + totalOffsets.g)).g + abs(totalDir.x) * 5.0;
+    float b = texture(image, pos + ambientWavesDir + totalDir * (1.0 + totalOffsets.b)).b + abs(totalDir.x) * 5.0;
 
     colour = vec4(r, g, b, 1.0);
 }

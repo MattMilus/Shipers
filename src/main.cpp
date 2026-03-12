@@ -1,6 +1,7 @@
 ﻿#include <SFML/Graphics.hpp>
 #include <iostream>
 #include <cmath>
+#include <map>
 
 #include "entities/Player.h"
 
@@ -15,6 +16,19 @@ Vector2f normalize(const Vector2f& source) {
 }
 
 int main() {
+    Glsl::Vec2 uPathHistory[1024];
+    std::map<int, std::unique_ptr<Boat>> activeBoats;
+
+
+    // @Todo: after connecting to server, server should create id for you
+    int myPlayerId = 1;
+
+    activeBoats[myPlayerId] = std::make_unique<Player>(sf::Vector2f(400.f, 300.f));
+
+    // @Todo: Change after connecting to server
+    int remotePlayerId = 2;
+    activeBoats[remotePlayerId] = std::make_unique<Boat>(sf::Vector2f(200.f, 200.f));
+
     RenderWindow window(VideoMode({ 800, 600 }), "GPU Ripples");
     window.setFramerateLimit(60);
 
@@ -39,7 +53,6 @@ int main() {
 
     Player player({ 400.f, 300.f });
 
-    Glsl::Vec2 uPathHistory[256];
     for (int i = 255; i >= 0; --i) {
         uPathHistory[i] = Glsl::Vec2(0.5f, 0.5f);
     }
@@ -59,12 +72,24 @@ int main() {
                 window.close();
         }
 
-        player.handleInput(deltaTime);
-        player.update(deltaTime);
+        auto it = activeBoats.find(myPlayerId);
+        if (it != activeBoats.end()) {
+            Player* localPlayer = dynamic_cast<Player*>(it->second.get());
+            if (localPlayer) {
+                localPlayer->handleInput(deltaTime);
+            }
+        }
 
-        boatSprite.setPosition(player.getPosition());
-        boatSprite.setRotation(sf::degrees(player.getCurrentAngle()));
+        for (auto& [id, boat] : activeBoats) {
+            boat->update(deltaTime);
 
+            // @Todo: Add collisions or something
+        }
+
+        for (auto& [id, boat] : activeBoats) {
+            boatSprite.setPosition(boat->getPosition());
+            boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
+        }
 
         for (int i = 255; i > 0; --i) {
             uPathHistory[i] = uPathHistory[i - 1];
@@ -84,7 +109,11 @@ int main() {
 
         window.clear();
         window.draw(screenQuad, &waveShader);
-        window.draw(boatSprite);
+
+        for (auto& [id, boat] : activeBoats) {
+            window.draw(boatSprite);
+        }
+
         window.display();
     }
 

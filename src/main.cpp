@@ -1,8 +1,11 @@
 ﻿#include <SFML/Graphics.hpp>
 #include <iostream>
 #include <cmath>
+#include <map>
 
+#include "managers/GameManager.h"
 #include "entities/Player.h"
+#include "managers/Renderer.h"
 
 using namespace sf;
 
@@ -15,40 +18,24 @@ Vector2f normalize(const Vector2f& source) {
 }
 
 int main() {
-    RenderWindow window(VideoMode({ 800, 600 }), "GPU Ripples");
-    window.setFramerateLimit(60);
+    GameManager *gameManager = new GameManager();
+    Renderer *renderer = new Renderer(gameManager);
+    RenderWindow& window = *renderer->initialize();
 
-    Shader checkerShader;
-    if (!checkerShader.loadFromFile("checker.frag", Shader::Type::Fragment)) {
-        std::cerr << "Failed to load checker shader\n";
-        return 1;
-    }
+    // @Todo: after connecting to server, server should create id for you
+    int myPlayerId = 1;
+    gameManager->addPlayer(myPlayerId, sf::Vector2f(400.f, 300.f));
 
-    Shader waveShader;
-    if (!waveShader.loadFromFile("wave.frag", Shader::Type::Fragment)) {
-        std::cerr << "Failed to load wave shader\n";
-        return 2;
-    }
-    Texture boatTexture("Sprite.png");
-	Sprite boatSprite(boatTexture);
-	boatSprite.setScale({ 0.5f, 0.5f });
-	boatSprite.setOrigin({ boatTexture.getSize().x / 2.f, boatTexture.getSize().y / 2.f });
+    // @Todo: Change after connecting to server to create remote player when server tells you about new player joining
+    int remotePlayerId = 2;
+    gameManager->addBoat(remotePlayerId, sf::Vector2f(200.f, 200.f));
+    // @Todo: If you want to test 2 player movement simultaneously uncomment line below and comment one above
+    // @Todo: Remember to get rid of this after connecting to server
+    //gameManager->addPlayer(remotePlayerId, sf::Vector2f(200.f, 200.f));
 
-    RenderTexture renderTex(Vector2u{ 800, 600 });
-    RectangleShape screenQuad(Vector2f{ 800.f, 600.f });
-
-    Player player({ 400.f, 300.f });
-
-    Glsl::Vec2 uPathHistory[256];
-    for (int i = 255; i >= 0; --i) {
-        uPathHistory[i] = Glsl::Vec2(0.5f, 0.5f);
-    }
 
     Clock globalClock;
     Clock deltaClock;
-
-    checkerShader.setUniform("uResolution", Glsl::Vec2(800.f, 600.f));
-    waveShader.setUniform("uResolution", Glsl::Vec2(800.f, 600.f));
 
     while (window.isOpen()) {
         float time = globalClock.getElapsedTime().asSeconds();
@@ -59,33 +46,24 @@ int main() {
                 window.close();
         }
 
-        player.handleInput(deltaTime);
-        player.update(deltaTime);
-
-        boatSprite.setPosition(player.getPosition());
-        boatSprite.setRotation(sf::degrees(player.getCurrentAngle()));
-
-
-        for (int i = 255; i > 0; --i) {
-            uPathHistory[i] = uPathHistory[i - 1];
+        if (Player* localPlayer = gameManager->getPlayerById(myPlayerId)) {
+            localPlayer->handleInput(deltaTime);
         }
 
-        // Normalizing player pos to [0, 1] range for shader
-        sf::Vector2f currentPos = player.getPosition();
-        uPathHistory[0] = Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
+        // @Todo: Test remote player input, change to real input after connecting to server
+        /*if (Player* remotePlayer = gameManager->getPlayerById(remotePlayerId)) {
+            remotePlayer->handleInput(-deltaTime);
+        }*/
 
-        renderTex.clear();
-        renderTex.draw(screenQuad, &checkerShader);
-        renderTex.display();
+        for (auto& [id, boat] : gameManager->getActiveBoats()) {
+            boat->update(deltaTime);
 
-        waveShader.setUniform("image", renderTex.getTexture());
-        waveShader.setUniform("uTime", time);
-        waveShader.setUniformArray("uPathHistory", uPathHistory, 256);
+            // @Todo: Add collisions or something
+        }
 
-        window.clear();
-        window.draw(screenQuad, &waveShader);
-        window.draw(boatSprite);
-        window.display();
+        //window.clear();
+        renderer->render(time);
+        //window.display();
     }
 
     return 0;

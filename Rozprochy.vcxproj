@@ -174,10 +174,14 @@
     <ClCompile Include="src\entities\Boat.cpp" />
     <ClCompile Include="src\entities\Player.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\managers\GameManager.cpp" />
+    <ClCompile Include="src\managers\Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\entities\Boat.h" />
     <ClInclude Include="src\entities\Player.h" />
+    <ClInclude Include="src\managers\GameManager.h" />
+    <ClInclude Include="src\managers\Renderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

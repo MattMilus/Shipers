@@ -5,7 +5,6 @@
 #include "Boat.h"
 #include <cmath>
 #include <algorithm>
-#include <iostream>
 
 constexpr float PI = 3.14159265f;
 

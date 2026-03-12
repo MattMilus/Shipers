@@ -8,7 +8,11 @@
 
 
 #pragma once
+#include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/System/Vector2.hpp>
+#include "../env.h"
+
+#define COLLIDER_RADIUS 20.f
 
 class Boat {
 private:
@@ -37,11 +41,16 @@ public:
 
     void setThrottle(float newThrottle);
     void addToAngleCommand(float angleInDegrees);
+    void addExternalForce(sf::Vector2f force);
+
+    bool isInCollider(sf::Vector2f position);
 
     sf::Vector2f getPosition() const;
     float getCurrentAngle() const;
     sf::Vector2f getVelocity() const;
     float getSpeed() const;
+
+    void debug(sf::RenderTarget& target);
 };
 
 

@@ -97,5 +97,14 @@ void Renderer::render(float time) {
     window.clear();
     renderBackground(time);
     renderBoats();
+    debug();
     window.display();
+}
+
+void Renderer::debug() {
+    if (ENV_APP_ENVIRONMENT != 1) return;
+
+    for (auto& [id, boat] : gameManager->getActiveBoats()) {
+        boat->debug(window);
+    }
 }

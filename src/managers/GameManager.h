@@ -17,6 +17,8 @@ private:
 public:
     GameManager();
 
+    void handleCollisions();
+
     // Returns the player ID (index) of the newly added player, or -1 if max players reached
     int addPlayer(int id, sf::Vector2f startPos);
     int addBoat(int id, sf::Vector2f startPos);

@@ -3,6 +3,7 @@
 //
 
 #include "GameManager.h"
+#include <cmath>
 
 GameManager::GameManager() {
     // Initialize any necessary game state here
@@ -49,4 +50,40 @@ Player* GameManager::getPlayerById(const int id) const {
         }
     }
     return nullptr;
+}
+
+// @todo: Function should be called by server on server side
+// @todo: Client should never call this function in production after connecting to server
+void GameManager::handleCollisions() {
+    for (auto it1 = activeBoats.begin(); it1 != activeBoats.end(); ++it1) {
+
+        for (auto it2 = std::next(it1); it2 != activeBoats.end(); ++it2) {
+
+            Boat* b1 = it1->second.get();
+            Boat* b2 = it2->second.get();
+
+            sf::Vector2f pos1 = b1->getPosition();
+            sf::Vector2f pos2 = b2->getPosition();
+
+            float dx = pos2.x - pos1.x;
+            float dy = pos2.y - pos1.y;
+            float distanceSquared = dx * dx + dy * dy;
+
+            float minDistance = COLLIDER_RADIUS * 2.f;
+
+            if (distanceSquared < minDistance * minDistance && distanceSquared > 0.0001f) {
+
+                float distance = std::sqrt(distanceSquared);
+                float overlap = minDistance - distance;
+
+                sf::Vector2f pushDirection(dx / distance, dy / distance);
+
+                float repulsionFactor = 5.f;
+                sf::Vector2f pushForce = pushDirection * overlap * repulsionFactor;
+
+                b1->addExternalForce(-pushForce);
+                b2->addExternalForce(pushForce);
+            }
+        }
+    }
 }

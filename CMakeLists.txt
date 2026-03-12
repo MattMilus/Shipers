@@ -22,6 +22,7 @@ add_executable(Shipers src/main.cpp
         src/managers/GameManager.cpp
         src/managers/GameManager.h
         src/managers/Renderer.cpp
-        src/managers/Renderer.h)
+        src/managers/Renderer.h
+        src/env.h)
 
 target_link_libraries(Shipers PRIVATE SFML::Graphics SFML::Window SFML::System)

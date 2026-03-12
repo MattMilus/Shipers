@@ -5,6 +5,7 @@
 #include "Boat.h"
 #include <cmath>
 #include <algorithm>
+#include <SFML/Graphics/CircleShape.hpp>
 
 constexpr float PI = 3.14159265f;
 
@@ -67,10 +68,37 @@ void Boat::addToAngleCommand(float angleInDegrees) {
     angleCommand += angleInDegrees;
     angleCommand = std::clamp(angleCommand, -90.f, 90.f);
 }
+
+void Boat::addExternalForce(sf::Vector2f force) {
+    velocity += force;
+}
+
+bool Boat::isInCollider(sf::Vector2f point) {
+    float dx = position.x - point.x;
+    float dy = position.y - point.y;
+    return (dx * dx + dy * dy) <= (COLLIDER_RADIUS * COLLIDER_RADIUS);
+}
+
+
 sf::Vector2f Boat::getPosition() const { return position; }
 float Boat::getCurrentAngle() const { return currentAngle; }
 sf::Vector2f Boat::getVelocity() const { return velocity; }
 
 float Boat::getSpeed() const {
     return std::sqrt((velocity.x * velocity.x) + (velocity.y * velocity.y));
+}
+
+void Boat::debug(sf::RenderTarget& target) {
+    if (ENV_APP_ENVIRONMENT != 1) return;
+
+    sf::CircleShape colliderCircle(COLLIDER_RADIUS);
+
+    colliderCircle.setOrigin({COLLIDER_RADIUS, COLLIDER_RADIUS});
+    colliderCircle.setPosition(position);
+
+    colliderCircle.setFillColor(sf::Color::Transparent);
+    colliderCircle.setOutlineColor(sf::Color::Red);
+    colliderCircle.setOutlineThickness(2.f);
+
+    target.draw(colliderCircle);
 }

@@ -61,6 +61,8 @@ int main() {
             // @Todo: Add collisions or something
         }
 
+        gameManager->handleCollisions();
+
         //window.clear();
         renderer->render(time);
         //window.display();

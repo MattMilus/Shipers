@@ -11,12 +11,15 @@
 #include <SFML/System/Vector2.hpp>
 
 class Boat {
+private:
+    void handleRotation(float deltaTime);
+    void move(float deltaTime);
 protected:
     sf::Vector2f position;
     sf::Vector2f velocity;
 
     float currentAngle;
-    float targetAngle;
+    float angleCommand;
 
     float throttle;
 
@@ -33,7 +36,7 @@ public:
     virtual void update(float deltaTime);
 
     void setThrottle(float newThrottle);
-    void setTargetAngle(float angleInDegrees);
+    void addToAngleCommand(float angleInDegrees);
 
     sf::Vector2f getPosition() const;
     float getCurrentAngle() const;

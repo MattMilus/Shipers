@@ -18,6 +18,8 @@ float getOffset(float age, float dist) {
 void main() {
     vec2 pos = gl_FragCoord.xy / uResolution;
     pos.y = 1.0 - pos.y; // visual fix
+    vec2 camera = uPathHistory[0] - vec2(0.5);
+    pos += camera;
 
     float x = sin(pos.y * 6.78 + uTime) * 0.05;
     float y = cos(pos.x * 3.78 + uTime) * 0.05;
@@ -43,9 +45,9 @@ void main() {
     }
 
     // pseudo piana do poprawy
-    float r = texture(image, pos + ambientWavesDir + totalDir * (2.0 + totalOffsets.r)).r + abs(totalDir.x) * 5.0;
-    float g = texture(image, pos + ambientWavesDir + totalDir * (2.0 + totalOffsets.g)).g + abs(totalDir.x) * 5.0;
-    float b = texture(image, pos + ambientWavesDir + totalDir * (1.0 + totalOffsets.b)).b + abs(totalDir.x) * 5.0;
+    float r = texture(image, pos + ambientWavesDir + totalDir * (0.5 + totalOffsets.r)).r + abs(totalDir.x) * 5.0;
+    float g = texture(image, pos + ambientWavesDir + totalDir * (0.5 + totalOffsets.g)).g + abs(totalDir.x) * 5.0;
+    float b = texture(image, pos + ambientWavesDir + totalDir * (0.25 + totalOffsets.b)).b + abs(totalDir.x) * 5.0;
 
     colour = vec4(r, g, b, 1.0);
 }

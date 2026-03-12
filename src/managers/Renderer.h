@@ -13,6 +13,7 @@
 #include <SFML/Graphics/Texture.hpp>
 
 #include "GameManager.h"
+#include "../env.h"
 
 #define BOAT_U_PATH_HISTORY_SIZE 256
 #define MAX_BOATS 4
@@ -45,6 +46,7 @@ public:
     sf::RenderWindow* initialize();
 
     void render(float time);
+    void debug();
 };
 
 

@@ -7,8 +7,8 @@
 #include <map>
 #include <memory>
 
-#include "entities/Boat.h"
-#include "entities/Player.h"
+#include "../entities/Boat.h"
+#include "../entities/Player.h"
 
 
 class GameManager {

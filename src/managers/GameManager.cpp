@@ -4,8 +4,6 @@
 
 #include "GameManager.h"
 
-#include "entities/Player.h"
-
 GameManager::GameManager() {
     // Initialize any necessary game state here
 }

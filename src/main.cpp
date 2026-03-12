@@ -3,8 +3,9 @@
 #include <cmath>
 #include <map>
 
-#include "GameManager.h"
+#include "managers/GameManager.h"
 #include "entities/Player.h"
+#include "managers/Renderer.h"
 
 using namespace sf;
 
@@ -17,8 +18,9 @@ Vector2f normalize(const Vector2f& source) {
 }
 
 int main() {
-    Glsl::Vec2 uPathHistory[1024];
     GameManager *gameManager = new GameManager();
+    Renderer *renderer = new Renderer(gameManager);
+    RenderWindow& window = *renderer->initialize();
 
     // @Todo: after connecting to server, server should create id for you
     int myPlayerId = 1;
@@ -31,37 +33,9 @@ int main() {
     // @Todo: Remember to get rid of this after connecting to server
     //gameManager->addPlayer(remotePlayerId, sf::Vector2f(200.f, 200.f));
 
-    RenderWindow window(VideoMode({ 800, 600 }), "GPU Ripples");
-    window.setFramerateLimit(60);
-
-    Shader checkerShader;
-    if (!checkerShader.loadFromFile("checker.frag", Shader::Type::Fragment)) {
-        std::cerr << "Failed to load checker shader\n";
-        return 1;
-    }
-
-    Shader waveShader;
-    if (!waveShader.loadFromFile("wave.frag", Shader::Type::Fragment)) {
-        std::cerr << "Failed to load wave shader\n";
-        return 2;
-    }
-    Texture boatTexture("Sprite.png");
-	Sprite boatSprite(boatTexture);
-	boatSprite.setScale({ 0.5f, 0.5f });
-	boatSprite.setOrigin({ boatTexture.getSize().x / 2.f, boatTexture.getSize().y / 2.f });
-
-    RenderTexture renderTex(Vector2u{ 800, 600 });
-    RectangleShape screenQuad(Vector2f{ 800.f, 600.f });
-
-    for (int i = 1024; i >= 0; --i) {
-        uPathHistory[i] = Glsl::Vec2(0.5f, 0.5f);
-    }
 
     Clock globalClock;
     Clock deltaClock;
-
-    checkerShader.setUniform("uResolution", Glsl::Vec2(800.f, 600.f));
-    waveShader.setUniform("uResolution", Glsl::Vec2(800.f, 600.f));
 
     while (window.isOpen()) {
         float time = globalClock.getElapsedTime().asSeconds();
@@ -87,40 +61,9 @@ int main() {
             // @Todo: Add collisions or something
         }
 
-        int boatIndex = 0;
-        for (auto& [id, boat] : gameManager->getActiveBoats()) {
-            boatSprite.setPosition(boat->getPosition());
-            boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
-
-            for (int i = 255; i > 0; --i) {
-                uPathHistory[boatIndex*4 + i] = uPathHistory[boatIndex*4 + i - 1];
-            }
-
-            sf::Vector2f currentPos = boat->getPosition();
-            // Normalizing player pos to [0, 1] range for shader
-            uPathHistory[boatIndex*4] = Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
-
-            boatIndex++;
-        }
-
-        renderTex.clear();
-        renderTex.draw(screenQuad, &checkerShader);
-        renderTex.display();
-
-        waveShader.setUniform("image", renderTex.getTexture());
-        waveShader.setUniform("uTime", time);
-        waveShader.setUniformArray("uPathHistory", uPathHistory, 1024);
-
-        window.clear();
-        window.draw(screenQuad, &waveShader);
-
-        for (auto& [id, boat] : gameManager->getActiveBoats()) {
-            boatSprite.setPosition(boat->getPosition());
-            boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
-            window.draw(boatSprite);
-        }
-
-        window.display();
+        //window.clear();
+        renderer->render(time);
+        //window.display();
     }
 
     return 0;

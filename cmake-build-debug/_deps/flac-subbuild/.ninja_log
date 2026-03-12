@@ -1,0 +1,37 @@
+# ninja log v6
+2	94	7949641228303807	flac-populate-prefix/src/flac-populate-stamp/flac-populate-mkdir	5781cb600e438f5e
+2	94	7949641228303807	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-mkdir	5781cb600e438f5e
+95	4341	7949641270737398	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-download	fd7089a20a2e6dfe
+3	262	7949652739422762	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-update	acc90617d820756c
+95	4341	7949641270737398	flac-populate-prefix/src/flac-populate-stamp/flac-populate-download	fd7089a20a2e6dfe
+262	380	7949652743113728	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-patch	283692a041471419
+3	262	7949652739422762	flac-populate-prefix/src/flac-populate-stamp/flac-populate-update	acc90617d820756c
+262	380	7949652743113728	flac-populate-prefix/src/flac-populate-stamp/flac-populate-patch	283692a041471419
+380	482	7949652744124571	flac-populate-prefix/src/flac-populate-stamp/flac-populate-configure	b02c47181c9e5b96
+380	482	7949652744124571	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-configure	b02c47181c9e5b96
+482	615	7949652745433690	flac-populate-prefix/src/flac-populate-stamp/flac-populate-build	fbc9c1bdd5324ea0
+482	615	7949652745433690	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-build	fbc9c1bdd5324ea0
+615	735	7949652746653747	flac-populate-prefix/src/flac-populate-stamp/flac-populate-install	1fd00363d55a400c
+615	735	7949652746653747	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-install	1fd00363d55a400c
+735	860	7949652747914302	flac-populate-prefix/src/flac-populate-stamp/flac-populate-test	77c89f8603f471af
+735	860	7949652747914302	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-test	77c89f8603f471af
+860	1054	7949652749831924	CMakeFiles/flac-populate-complete	2625453f4e920981
+860	1054	7949652749831924	flac-populate-prefix/src/flac-populate-stamp/flac-populate-done	2625453f4e920981
+860	1054	7949652749831924	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/CMakeFiles/flac-populate-complete	2625453f4e920981
+860	1054	7949652749831924	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-done	2625453f4e920981
+3	217	7949657564948509	flac-populate-prefix/src/flac-populate-stamp/flac-populate-update	acc90617d820756c
+3	217	7949657564948509	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-update	acc90617d820756c
+217	314	7949657567970616	flac-populate-prefix/src/flac-populate-stamp/flac-populate-patch	283692a041471419
+217	314	7949657567970616	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-patch	283692a041471419
+314	411	7949657568957823	flac-populate-prefix/src/flac-populate-stamp/flac-populate-configure	b02c47181c9e5b96
+314	411	7949657568957823	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-configure	b02c47181c9e5b96
+411	502	7949657569875664	flac-populate-prefix/src/flac-populate-stamp/flac-populate-build	fbc9c1bdd5324ea0
+411	502	7949657569875664	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-build	fbc9c1bdd5324ea0
+502	590	7949657570750037	flac-populate-prefix/src/flac-populate-stamp/flac-populate-install	1fd00363d55a400c
+502	590	7949657570750037	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-install	1fd00363d55a400c
+590	679	7949657571639763	flac-populate-prefix/src/flac-populate-stamp/flac-populate-test	77c89f8603f471af
+590	679	7949657571639763	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-test	77c89f8603f471af
+679	793	7949657572784608	CMakeFiles/flac-populate-complete	2625453f4e920981
+679	793	7949657572784608	flac-populate-prefix/src/flac-populate-stamp/flac-populate-done	2625453f4e920981
+679	793	7949657572784608	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/CMakeFiles/flac-populate-complete	2625453f4e920981
+679	793	7949657572784608	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/flac-subbuild/flac-populate-prefix/src/flac-populate-stamp/flac-populate-done	2625453f4e920981

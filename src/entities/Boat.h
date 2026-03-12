@@ -13,6 +13,7 @@
 class Boat {
 private:
     void handleRotation(float deltaTime);
+    void move(float deltaTime);
 protected:
     sf::Vector2f position;
     sf::Vector2f velocity;

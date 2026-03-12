@@ -1,0 +1,3 @@
+D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/vorbis-subbuild/CMakeFiles/vorbis-populate.dir
+D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/vorbis-subbuild/CMakeFiles/edit_cache.dir
+D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/vorbis-subbuild/CMakeFiles/rebuild_cache.dir

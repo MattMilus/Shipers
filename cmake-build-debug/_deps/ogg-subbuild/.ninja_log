@@ -1,0 +1,37 @@
+# ninja log v6
+2	91	7949641047127792	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-mkdir	6c8388ad13b17eea
+91	4501	7949641091241376	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-download	12b3c6bbbd7ef938
+2	91	7949641047127792	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-mkdir	6c8388ad13b17eea
+2	216	7949652699342207	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-update	528b97e74508b317
+91	4501	7949641091241376	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-download	12b3c6bbbd7ef938
+2	216	7949652699342207	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-update	528b97e74508b317
+216	314	7949652702383908	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-patch	9c77844393586075
+216	314	7949652702383908	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-patch	9c77844393586075
+314	409	7949652703332490	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-configure	4d5a0e54f63f3825
+314	409	7949652703332490	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-configure	4d5a0e54f63f3825
+409	534	7949652704587599	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-build	b986c99408d17203
+409	534	7949652704587599	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-build	b986c99408d17203
+534	650	7949652705746538	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-install	d50ea4b15a520e21
+534	650	7949652705746538	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-install	d50ea4b15a520e21
+650	789	7949652707102472	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-test	17db774090dea4d0
+650	789	7949652707102472	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-test	17db774090dea4d0
+789	945	7949652708688667	CMakeFiles/ogg-populate-complete	665f72fd3e021dd1
+789	945	7949652708688667	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-done	665f72fd3e021dd1
+789	945	7949652708688667	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/CMakeFiles/ogg-populate-complete	665f72fd3e021dd1
+789	945	7949652708688667	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-done	665f72fd3e021dd1
+2	198	7949657543296958	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-update	528b97e74508b317
+2	198	7949657543296958	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-update	528b97e74508b317
+198	285	7949657546049406	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-patch	9c77844393586075
+198	285	7949657546049406	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-patch	9c77844393586075
+285	380	7949657546970789	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-configure	4d5a0e54f63f3825
+285	380	7949657546970789	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-configure	4d5a0e54f63f3825
+380	474	7949657547924025	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-build	b986c99408d17203
+380	474	7949657547924025	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-build	b986c99408d17203
+474	571	7949657548899856	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-install	d50ea4b15a520e21
+474	571	7949657548899856	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-install	d50ea4b15a520e21
+571	669	7949657549872457	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-test	17db774090dea4d0
+571	669	7949657549872457	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-test	17db774090dea4d0
+670	805	7949657551231699	CMakeFiles/ogg-populate-complete	665f72fd3e021dd1
+670	805	7949657551231699	ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-done	665f72fd3e021dd1
+670	805	7949657551231699	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/CMakeFiles/ogg-populate-complete	665f72fd3e021dd1
+670	805	7949657551231699	D:/pliki/studia/semestr 4/Rozporszone/Projekt/Shipers/cmake-build-debug/_deps/ogg-subbuild/ogg-populate-prefix/src/ogg-populate-stamp/ogg-populate-done	665f72fd3e021dd1

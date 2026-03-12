@@ -37,9 +37,7 @@ void Boat::handleRotation(float deltaTime) {
     while (currentAngle < 0.f) currentAngle += 360.f;
 }
 
-void Boat::update(float deltaTime) {
-    handleRotation(deltaTime);
-
+void Boat::move(float deltaTime) {
     float rad = (currentAngle - 90.f) * (PI / 180.f);
     sf::Vector2f forwardVec(std::cos(rad), std::sin(rad));
     sf::Vector2f rightVec(-std::sin(rad), std::cos(rad));
@@ -55,6 +53,11 @@ void Boat::update(float deltaTime) {
     velocity = (forwardVec * forwardVelocity) + (rightVec * lateralVelocity);
 
     position += velocity * deltaTime;
+}
+
+void Boat::update(float deltaTime) {
+    handleRotation(deltaTime);
+    move(deltaTime);
 }
 
 void Boat::setThrottle(float newThrottle) {

@@ -18,6 +18,8 @@ add_executable(Shipers src/main.cpp
         src/entities/Boat.cpp
         src/entities/Boat.h
         src/entities/Player.cpp
-        src/entities/Player.h)
+        src/entities/Player.h
+        src/GameManager.cpp
+        src/GameManager.h)
 
 target_link_libraries(Shipers PRIVATE SFML::Graphics SFML::Window SFML::System)

@@ -3,6 +3,7 @@
 #include <cmath>
 #include <map>
 
+#include "GameManager.h"
 #include "entities/Player.h"
 
 using namespace sf;
@@ -17,17 +18,18 @@ Vector2f normalize(const Vector2f& source) {
 
 int main() {
     Glsl::Vec2 uPathHistory[1024];
-    std::map<int, std::unique_ptr<Boat>> activeBoats;
-
+    GameManager *gameManager = new GameManager();
 
     // @Todo: after connecting to server, server should create id for you
     int myPlayerId = 1;
+    gameManager->addPlayer(myPlayerId, sf::Vector2f(400.f, 300.f));
 
-    activeBoats[myPlayerId] = std::make_unique<Player>(sf::Vector2f(400.f, 300.f));
-
-    // @Todo: Change after connecting to server
+    // @Todo: Change after connecting to server to create remote player when server tells you about new player joining
     int remotePlayerId = 2;
-    activeBoats[remotePlayerId] = std::make_unique<Boat>(sf::Vector2f(200.f, 200.f));
+    gameManager->addBoat(remotePlayerId, sf::Vector2f(200.f, 200.f));
+    // @Todo: If you want to test 2 player movement simultaneously uncomment line below and comment one above
+    // @Todo: Remember to get rid of this after connecting to server
+    //gameManager->addPlayer(remotePlayerId, sf::Vector2f(200.f, 200.f));
 
     RenderWindow window(VideoMode({ 800, 600 }), "GPU Ripples");
     window.setFramerateLimit(60);
@@ -51,9 +53,7 @@ int main() {
     RenderTexture renderTex(Vector2u{ 800, 600 });
     RectangleShape screenQuad(Vector2f{ 800.f, 600.f });
 
-    Player player({ 400.f, 300.f });
-
-    for (int i = 255; i >= 0; --i) {
+    for (int i = 1024; i >= 0; --i) {
         uPathHistory[i] = Glsl::Vec2(0.5f, 0.5f);
     }
 
@@ -72,32 +72,36 @@ int main() {
                 window.close();
         }
 
-        auto it = activeBoats.find(myPlayerId);
-        if (it != activeBoats.end()) {
-            Player* localPlayer = dynamic_cast<Player*>(it->second.get());
-            if (localPlayer) {
-                localPlayer->handleInput(deltaTime);
-            }
+        if (Player* localPlayer = gameManager->getPlayerById(myPlayerId)) {
+            localPlayer->handleInput(deltaTime);
         }
 
-        for (auto& [id, boat] : activeBoats) {
+        // @Todo: Test remote player input, change to real input after connecting to server
+        /*if (Player* remotePlayer = gameManager->getPlayerById(remotePlayerId)) {
+            remotePlayer->handleInput(-deltaTime);
+        }*/
+
+        for (auto& [id, boat] : gameManager->getActiveBoats()) {
             boat->update(deltaTime);
 
             // @Todo: Add collisions or something
         }
 
-        for (auto& [id, boat] : activeBoats) {
+        int boatIndex = 0;
+        for (auto& [id, boat] : gameManager->getActiveBoats()) {
             boatSprite.setPosition(boat->getPosition());
             boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
-        }
 
-        for (int i = 255; i > 0; --i) {
-            uPathHistory[i] = uPathHistory[i - 1];
-        }
+            for (int i = 255; i > 0; --i) {
+                uPathHistory[boatIndex*4 + i] = uPathHistory[boatIndex*4 + i - 1];
+            }
 
-        // Normalizing player pos to [0, 1] range for shader
-        sf::Vector2f currentPos = player.getPosition();
-        uPathHistory[0] = Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
+            sf::Vector2f currentPos = boat->getPosition();
+            // Normalizing player pos to [0, 1] range for shader
+            uPathHistory[boatIndex*4] = Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
+
+            boatIndex++;
+        }
 
         renderTex.clear();
         renderTex.draw(screenQuad, &checkerShader);
@@ -105,12 +109,14 @@ int main() {
 
         waveShader.setUniform("image", renderTex.getTexture());
         waveShader.setUniform("uTime", time);
-        waveShader.setUniformArray("uPathHistory", uPathHistory, 256);
+        waveShader.setUniformArray("uPathHistory", uPathHistory, 1024);
 
         window.clear();
         window.draw(screenQuad, &waveShader);
 
-        for (auto& [id, boat] : activeBoats) {
+        for (auto& [id, boat] : gameManager->getActiveBoats()) {
+            boatSprite.setPosition(boat->getPosition());
+            boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
             window.draw(boatSprite);
         }
 

@@ -4,8 +4,8 @@
 #include <map>
 
 #include "managers/GameManager.h"
-#include "entities/Player.h"
 #include "managers/Renderer.h"
+#include "entities/Player.h"
 
 using namespace sf;
 

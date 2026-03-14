@@ -3,6 +3,9 @@
 //
 
 #include "StateManager.h"
+
+#include <stdio.h>
+
 #include "../ServerPackets.h"
 
 void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
@@ -12,6 +15,7 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameSta
 
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (gameState->players[i].isActive && gameState->players[i].playerId == move_data->player_id) {
+            fprintf(stderr, "Player %d moves to %f %f\n", i, move_data->x, move_data->y);
             gameState->players[i].boat.position.x = move_data->x;
             gameState->players[i].boat.position.y = move_data->y;
             gameState->players[i].boat.current_angle = move_data->currentAngle;

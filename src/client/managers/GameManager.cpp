@@ -18,6 +18,7 @@ int GameManager::connectToServer() {
     if (id == -1) {
         return -1;
     }
+    printf("connected with id %d", id);
 
     playerId = id;
     addPlayer(id, sf::Vector2f(400.f, 300.f));

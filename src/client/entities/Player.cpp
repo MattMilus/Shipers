@@ -6,7 +6,7 @@
 
 constexpr float PI = 3.14159265f;
 
-Player::Player(sf::Vector2f startPos) : Boat(startPos) {}
+Player::Player(int playerId, sf::Vector2f startPos) : Boat(startPos), playerId(playerId) {}
 
 void Player::handleInput(float deltaTime) {
 

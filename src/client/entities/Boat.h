@@ -37,7 +37,7 @@ public:
     Boat(sf::Vector2f startPos);
     virtual ~Boat() = default;
 
-    virtual void update(float deltaTime);
+    void update(float deltaTime);
 
     void setThrottle(float newThrottle);
     void addToAngleCommand(float angleInDegrees);
@@ -45,10 +45,14 @@ public:
 
     bool isInCollider(sf::Vector2f position);
 
+    void setPosition(sf::Vector2f newPosition);
     sf::Vector2f getPosition() const;
+    void setCurrentAngle(float newRotation );
     float getCurrentAngle() const;
+    float getAngleCommand() const;
     sf::Vector2f getVelocity() const;
     float getSpeed() const;
+    float getThrottle() const;
 
     void debug(sf::RenderTarget& target);
 };

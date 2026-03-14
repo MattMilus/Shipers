@@ -7,16 +7,20 @@
 #include <stdio.h>
 #include <sys/socket.h>
 
-void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr) {
-    PacketAccepted response;
-    response.type = MSG_ACCEPTED;
-    response.player_id = 1;
+void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
+    printf("Handling connection from client\n");
+    int new_player_id = game_manager_add_player(gameState);
+    printf("New player id %d\n", new_player_id);
 
-    sendto(sock, &response, sizeof(PacketAccepted), 0,
-           (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
-}
+    if (new_player_id == -1) {
+        // Wyślij do klienta pakiet z błędem np. MSG_SERVER_FULL
+    } else {
+        printf("Player with id %d\n", new_player_id);
+        PacketAccepted response;
+        response.type = MSG_ACCEPTED;
+        response.player_id = 1;
 
-void player_join(char* buffer, int sock, struct sockaddr_in *client_addr) {
-    PacketJoin *joinPacket = (PacketJoin *) buffer;
-    fprintf(stderr, "Player with id %d joined the lobby\n", joinPacket->player_id);
+        sendto(sock, &response, sizeof(PacketAccepted), 0,
+               (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
+    }
 }

@@ -6,9 +6,11 @@
 #include <stdio.h>
 #include "Router.h"
 
+#include "managers/GameManager.h"
 #include "packets_handlers/ConnectionHandler.h"
+#include "packets_handlers/StateManager.h"
 
-void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *client_addr) {
+void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *client_addr, GameState* gameState) {
     if (read_size < sizeof(MsgHeader)) {
         fprintf(stderr, "Rejecting packet, too short (%d bytes).\n", read_size);
         return;
@@ -19,12 +21,12 @@ void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *cl
     switch (header->type) {
         case MSG_CONNECT: {
             fprintf(stderr, "Received message CONNECT\n");
-            accept_connection(buffer, sock, client_addr);
+            accept_connection(buffer, sock, client_addr, gameState);
             break;
         }
-        case MSG_JOIN: {
-            fprintf(stderr, "Received message JOIN\n");
-            player_join(buffer, sock, client_addr);
+        case MSG_MOVE: {
+            //fprintf(stderr, "Move player\n");
+            movePlayer(buffer, sock, client_addr, gameState);
             break;
         }
 

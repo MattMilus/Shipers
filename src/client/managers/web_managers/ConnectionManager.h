@@ -5,10 +5,11 @@
 #ifndef SHIPERS_CONNECTIONMANAGER_H
 #define SHIPERS_CONNECTIONMANAGER_H
 
+#include "../GameManager.h"
 
 class ConnectionManager {
 public:
-    static int connectToServer();
+    static int connectToServer(GameManager* game_manager);
 };
 
 

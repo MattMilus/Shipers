@@ -83,6 +83,8 @@ void* state_broadcaster(void* arg) {
             }
         }
 
+        fprintf(stderr, "Active players in msg game state %d\n", packet.active_players_count);
+
         if (packet.active_players_count > 0) {
             for (int i = 0; i < MAX_PLAYERS; i++) {
                 if (state->players[i].isActive) {
@@ -100,8 +102,6 @@ void* state_broadcaster(void* arg) {
 int main(int argc, char *argv[]) {
     int listenfd = 0;
     struct sockaddr_in serv_addr;
-
-    pthread_t thread_id;
     listenfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (listenfd < 0) {
         perror("Error while creating socket");
@@ -141,6 +141,8 @@ int main(int argc, char *argv[]) {
 
         data->read_size = recvfrom(listenfd, data->message, 2000, 0,
                                    (struct sockaddr*)&data->client_addr, &client_len);
+
+        pthread_t thread_id;
 
         if (data->read_size > 0) {
             pthread_create(&thread_id, NULL, connection_handler, (void*)data);

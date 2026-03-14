@@ -22,6 +22,11 @@ void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *cl
             accept_connection(buffer, sock, client_addr);
             break;
         }
+        case MSG_JOIN: {
+            fprintf(stderr, "Received message JOIN\n");
+            player_join(buffer, sock, client_addr);
+            break;
+        }
 
 
         default:

@@ -31,9 +31,7 @@ int ConnectionManager::connectToServer() {
 
     sf::UdpSocket socket;
 
-    PacketConnect connectPacket {
-        MsgHeader {MSG_CONNECT}
-    };
+    PacketConnect connectPacket {MSG_CONNECT};
 
     if (socket.send(&connectPacket, sizeof(connectPacket), *serverIp, ENV_SERVER_PORT) != sf::Socket::Status::Done) {
         std::cerr << "Error while connecting to server!\n";
@@ -57,6 +55,15 @@ int ConnectionManager::connectToServer() {
                 if (received == sizeof(PacketAccepted)) {
                     PacketAccepted acceptedPacket;
                     std::memcpy(&acceptedPacket, buffer, sizeof(PacketAccepted));
+
+                    PacketJoin joinPacket{
+                        MSG_JOIN,
+                        acceptedPacket.player_id
+                    };
+                    if (socket.send(&joinPacket, sizeof(joinPacket), *serverIp, ENV_SERVER_PORT) != sf::Socket::Status::Done) {
+                        std::cerr << "Error while connecting to server!\n";
+                        return -1;
+                    }
 
                     return acceptedPacket.player_id;
                 }

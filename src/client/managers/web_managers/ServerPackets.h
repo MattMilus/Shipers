@@ -12,7 +12,8 @@
 enum MessageType : std::uint32_t {
     MSG_CONNECT = 1,
     MSG_ACCEPTED = 2,
-    MSG_MOVE = 3
+    MSG_JOIN = 3,
+    MSG_MOVE = 10
 };
 
 struct MsgHeader {
@@ -20,10 +21,15 @@ struct MsgHeader {
 };
 
 struct PacketConnect {
-    MsgHeader header;
+    MessageType type;
 };
 
 struct PacketAccepted {
+    MessageType type;
+    int player_id;
+};
+
+struct PacketJoin {
     MessageType type;
     int player_id;
 };

@@ -21,7 +21,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             src/server/packets_handlers/ConnectionHandler.h
             src/server/Router.c
             src/server/Router.h
-            src/server/MessageTypeEnum.h)
+            src/server/ServerPackets.h)
 
     target_link_libraries(ShipersServer m)
 
@@ -52,7 +52,7 @@ else()
             src/client/entities/Player.h
             src/client/entities/Boat.cpp
             src/client/entities/Boat.h
-            src/client/ServerPackets.h
+            src/client/managers/web_managers/ServerPackets.h
             src/client/managers/web_managers/ConnectionManager.cpp
             src/client/managers/web_managers/ConnectionManager.h
     )

@@ -15,3 +15,8 @@ void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr) 
     sendto(sock, &response, sizeof(PacketAccepted), 0,
            (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
 }
+
+void player_join(char* buffer, int sock, struct sockaddr_in *client_addr) {
+    PacketJoin *joinPacket = (PacketJoin *) buffer;
+    fprintf(stderr, "Player with id %d joined the lobby\n", joinPacket->player_id);
+}

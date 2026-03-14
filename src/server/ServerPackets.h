@@ -12,7 +12,7 @@
 typedef enum uint32_t {
     MSG_CONNECT = 1,
     MSG_ACCEPTED = 2,
-    MSG_MOVE = 3
+    MSG_JOIN = 3
 } MessageType;
 
 typedef struct {
@@ -27,6 +27,11 @@ typedef struct {
     MessageType type;
     int player_id;
 } PacketAccepted;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketJoin;
 
 typedef struct {
     MessageType type; // Zawsze MSG_MOVE

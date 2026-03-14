@@ -14,7 +14,9 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(STATUS "--- Kompilacja na LINUX (WSL / Raspberry Pi) ---")
     message(STATUS "Budowanie TYLKO serwera w czystym C (bez SFML).")
 
-    add_executable(ShipersServer src/server/main.c)
+    add_executable(ShipersServer src/server/main.c
+            src/server/managers/GameManager.c
+            src/server/managers/GameManager.h)
 
     target_link_libraries(ShipersServer m)
 

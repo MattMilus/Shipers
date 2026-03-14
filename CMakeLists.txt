@@ -1,28 +1,66 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 4.1.2)
 project(Shipers)
 
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-include(FetchContent)
-set(BUILD_SHARED_LIBS OFF)
+# --------------------------------------------------------
+# 1. Server
+# --------------------------------------------------------
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(STATUS "--- Kompilacja na LINUX (WSL / Raspberry Pi) ---")
+    message(STATUS "Budowanie TYLKO serwera w czystym C (bez SFML).")
 
-FetchContent_Declare(
-        SFML
-        GIT_REPOSITORY https://github.com/SFML/SFML.git
-        GIT_TAG 3.0.0
-)
-FetchContent_MakeAvailable(SFML)
+    add_executable(ShipersServer src/server/main.c
+            src/server/managers/GameManager.c
+            src/server/managers/GameManager.h
+            src/server/packets_handlers/ConnectionHandler.c
+            src/server/packets_handlers/ConnectionHandler.h
+            src/server/Router.c
+            src/server/Router.h
+            src/server/ServerPackets.h)
 
-add_executable(Shipers src/main.cpp
-        src/entities/Boat.cpp
-        src/entities/Boat.h
-        src/entities/Player.cpp
-        src/entities/Player.h
-        src/managers/GameManager.cpp
-        src/managers/GameManager.h
-        src/managers/Renderer.cpp
-        src/managers/Renderer.h
-        src/env.h)
+    target_link_libraries(ShipersServer m)
 
-target_link_libraries(Shipers PRIVATE SFML::Graphics SFML::Window SFML::System)
+else()
+    # --------------------------------------------------------
+    # 2. Client
+    # --------------------------------------------------------
+    message(STATUS "--- Kompilacja na WINDOWS / MAC ---")
+    message(STATUS "Pobieranie SFML i budowanie Klienta w C++.")
+
+    include(FetchContent)
+    set(BUILD_SHARED_LIBS OFF)
+
+    FetchContent_Declare(
+            SFML
+            GIT_REPOSITORY https://github.com/SFML/SFML.git
+            GIT_TAG 3.0.0
+    )
+    FetchContent_MakeAvailable(SFML)
+
+    add_executable(ShipersClient
+            src/client/main.cpp
+            src/client/managers/Renderer.cpp
+            src/client/managers/Renderer.h
+            src/client/managers/GameManager.cpp
+            src/client/managers/GameManager.h
+            src/client/entities/Player.cpp
+            src/client/entities/Player.h
+            src/client/entities/Boat.cpp
+            src/client/entities/Boat.h
+            src/client/managers/web_managers/ServerPackets.h
+            src/client/managers/web_managers/ConnectionManager.cpp
+            src/client/managers/web_managers/ConnectionManager.h
+    )
+
+    target_link_libraries(ShipersClient PRIVATE
+            SFML::Graphics
+            SFML::Window
+            SFML::System
+            SFML::Network
+    )
+endif()

@@ -10,11 +10,11 @@ Renderer::Renderer(GameManager* game_manager) : gameManager(game_manager), boatS
 }
 
 void Renderer::loadShaders() {
-    if (!checkerShader.loadFromFile("checker.frag", sf::Shader::Type::Fragment)) {
+    if (!checkerShader.loadFromFile("assets/shaders/checker.frag", sf::Shader::Type::Fragment)) {
         std::cerr << "Failed to load checker shader\n";
     }
 
-    if (!waveShader.loadFromFile("wave.frag", sf::Shader::Type::Fragment)) {
+    if (!waveShader.loadFromFile("assets/shaders/wave.frag", sf::Shader::Type::Fragment)) {
         std::cerr << "Failed to load wave shader\n";
     }
 
@@ -23,7 +23,7 @@ void Renderer::loadShaders() {
 }
 
 void Renderer::loadTextures() {
-    if (!boatTexture.loadFromFile("Sprite.png")) {
+    if (!boatTexture.loadFromFile("assets/textures/Sprite.png")) {
         std::cerr << "Failed to load boat texture\n";
     }
 }

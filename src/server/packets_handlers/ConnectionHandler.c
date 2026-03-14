@@ -9,7 +9,7 @@
 
 void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
     printf("Handling connection from client\n");
-    int new_player_id = game_manager_add_player(gameState);
+    int new_player_id = game_manager_add_player(gameState, client_addr);
     printf("New player id %d\n", new_player_id);
 
     if (new_player_id == -1) {
@@ -18,7 +18,7 @@ void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, 
         printf("Player with id %d\n", new_player_id);
         PacketAccepted response;
         response.type = MSG_ACCEPTED;
-        response.player_id = 1;
+        response.player_id = new_player_id;
 
         sendto(sock, &response, sizeof(PacketAccepted), 0,
                (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));

@@ -16,7 +16,7 @@ void game_manager_init(GameState* state, int listenfd_socket) {
     }
 }
 
-int game_manager_add_player(GameState* state) {
+int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr) {
     pthread_mutex_lock(&state->lock);
 
     if (state->current_player_count >= MAX_PLAYERS) {
@@ -29,6 +29,8 @@ int game_manager_add_player(GameState* state) {
 
             state->players[i].isActive = true;
             state->current_player_count++;
+
+            state->players[i].client_addr = *client_addr;
 
             Vector2f start_pos;
             start_pos.x = 100.0f;

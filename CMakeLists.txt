@@ -16,7 +16,12 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     add_executable(ShipersServer src/server/main.c
             src/server/managers/GameManager.c
-            src/server/managers/GameManager.h)
+            src/server/managers/GameManager.h
+            src/server/packets_handlers/ConnectionHandler.c
+            src/server/packets_handlers/ConnectionHandler.h
+            src/server/Router.c
+            src/server/Router.h
+            src/server/MessageTypeEnum.h)
 
     target_link_libraries(ShipersServer m)
 
@@ -47,6 +52,9 @@ else()
             src/client/entities/Player.h
             src/client/entities/Boat.cpp
             src/client/entities/Boat.h
+            src/client/ServerPackets.h
+            src/client/managers/web_managers/ConnectionManager.cpp
+            src/client/managers/web_managers/ConnectionManager.h
     )
 
     target_link_libraries(ShipersClient PRIVATE

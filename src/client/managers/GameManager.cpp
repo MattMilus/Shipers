@@ -5,8 +5,23 @@
 #include "GameManager.h"
 #include <cmath>
 
-GameManager::GameManager() {
+#include "SFML/Network/IpAddress.hpp"
+#include "SFML/Network/Socket.hpp"
+#include "web_managers/ConnectionManager.h"
+
+GameManager::GameManager() : playerId(0) {
     // Initialize any necessary game state here
+}
+
+int GameManager::connectToServer() {
+    const int id = ConnectionManager::connectToServer();
+    if (id == -1) {
+        return -1;
+    }
+
+    playerId = id;
+    addPlayer(id, sf::Vector2f(400.f, 300.f));
+    return playerId;
 }
 
 int GameManager::addPlayer(int id, sf::Vector2f startPos) {
@@ -41,8 +56,8 @@ Boat* GameManager::getBoatById(const int id) const {
     return nullptr;
 }
 
-Player* GameManager::getPlayerById(const int id) const {
-    auto it = activeBoats.find(id);
+Player* GameManager::getPlayer() const {
+    auto it = activeBoats.find(playerId);
     if (it != activeBoats.end()) {
         Player* playerPtr = dynamic_cast<Player*>(it->second.get());
         if (playerPtr) {

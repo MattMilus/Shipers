@@ -7,6 +7,8 @@
 #include <string.h>
 #include <pthread.h>
 
+#include "Router.h"
+
 struct client_data {
     int sock;
     struct sockaddr_in client_addr;
@@ -16,27 +18,8 @@ struct client_data {
 
 void *connection_handler(void *arg) {
     struct client_data *data = (struct client_data *)arg;
-    data->message[data->read_size] = '\0';
 
-    fprintf(stderr, "Otrzymano od %s:%d -> %s\n",
-            inet_ntoa(data->client_addr.sin_addr),
-            ntohs(data->client_addr.sin_port),
-            data->message);
-
-    if (strncmp(data->message, "CONNECT", 7) == 0) {
-        char response[50];
-        int new_player_id = 1;
-
-        snprintf(response, sizeof(response), "ACCEPTED %d", new_player_id);
-
-        sendto(data->sock, response, strlen(response), 0,
-               (struct sockaddr*)&data->client_addr, sizeof(data->client_addr));
-
-        fprintf(stderr, "Wyslano do klienta: %s\n", response);
-    } else {
-        // Tutaj w przyszłości dodasz obsługę innych wiadomości od klienta (np. ruchy gracza)
-        // sendto(data->sock, data->message, data->read_size, 0, ...);
-    }
+    route_message(data->message, data->read_size, data->sock, &data->client_addr);
 
     free(data);
     pthread_exit(NULL);
@@ -49,7 +32,7 @@ int main(int argc, char *argv[]) {
     pthread_t thread_id;
     listenfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (listenfd < 0) {
-        perror("Blad przy tworzeniu gniazda (socket)");
+        perror("Error while creating socket");
         exit(EXIT_FAILURE);
     }
 
@@ -60,7 +43,7 @@ int main(int argc, char *argv[]) {
     serv_addr.sin_port = htons(5000);
 
     if (bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-        perror("Blad funkcji bind (np. port jest juz zajety)");
+        perror("Bind function error (eg. port id already occupied)");
         exit(EXIT_FAILURE);
     }
 
@@ -68,20 +51,17 @@ int main(int argc, char *argv[]) {
 
 
     for (;;) {
-        fprintf(stderr, "Waiting for a packet\n");
-
         struct client_data *data = malloc(sizeof(struct client_data));
         socklen_t client_len = sizeof(data->client_addr);
         data->sock = listenfd;
 
         data->read_size = recvfrom(listenfd, data->message, 2000, 0,
                                    (struct sockaddr*)&data->client_addr, &client_len);
-        fprintf(stderr, "Received\n");
 
         if (data->read_size > 0) {
             pthread_create(&thread_id, NULL, connection_handler, (void*)data);
 
-            //pthread_detach(thread_id);
+            pthread_detach(thread_id);
         } else {
             free(data);
         }

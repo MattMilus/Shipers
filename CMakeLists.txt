@@ -14,7 +14,14 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(STATUS "--- Kompilacja na LINUX (WSL / Raspberry Pi) ---")
     message(STATUS "Budowanie TYLKO serwera w czystym C (bez SFML).")
 
-    add_executable(ShipersServer src/server/main.c)
+    add_executable(ShipersServer src/server/main.c
+            src/server/managers/GameManager.c
+            src/server/managers/GameManager.h
+            src/server/packets_handlers/ConnectionHandler.c
+            src/server/packets_handlers/ConnectionHandler.h
+            src/server/Router.c
+            src/server/Router.h
+            src/server/ServerPackets.h)
 
     target_link_libraries(ShipersServer m)
 
@@ -45,6 +52,9 @@ else()
             src/client/entities/Player.h
             src/client/entities/Boat.cpp
             src/client/entities/Boat.h
+            src/client/managers/web_managers/ServerPackets.h
+            src/client/managers/web_managers/ConnectionManager.cpp
+            src/client/managers/web_managers/ConnectionManager.h
     )
 
     target_link_libraries(ShipersClient PRIVATE

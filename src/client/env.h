@@ -11,6 +11,8 @@
 #define ENV_DEBUG 1
 #define ENV_APP_ENVIRONMENT ENV_DEBUG
 
+#define ENV_SERVER_PORT 5000
+
 class env {
 
 };

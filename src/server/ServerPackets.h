@@ -12,6 +12,9 @@
 typedef enum uint32_t {
     MSG_CONNECT = 1,
     MSG_ACCEPTED = 2,
+    MSG_DISCONNECT = 3,
+    MSG_PLAYER_DISCONNECTED = 4,
+    MSG_TIMEOUT = 5,
     MSG_GAME_STATE = 100,
     MSG_MOVE = 101
 } MessageType;
@@ -20,9 +23,9 @@ typedef struct {
     MessageType type;
 } MsgHeader;
 
-struct PacketConnect {
+typedef struct {
     MsgHeader header;
-};
+} PacketConnect;
 
 typedef struct {
     MessageType type;
@@ -32,7 +35,17 @@ typedef struct {
 typedef struct {
     MessageType type;
     int player_id;
-} PacketJoin;
+} PacketDisconnect;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketPlayerDisconnected;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketTimeout;
 
 typedef struct {
     uint32_t type;

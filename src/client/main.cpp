@@ -75,5 +75,7 @@ int main() {
         renderer->render(time);
     }
 
+    gameManager->disconnectFromServer();
+
     return 0;
 }

@@ -38,20 +38,29 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                         remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
                         remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
                         remoteBoat->setThrottle(statePacket.players[i].throttle);
-                        remoteBoat->setThrottle(statePacket.players[i].throttle);
                     }
                 }
             }
             break;
         }
-
-        // Tutaj w przyszłości możesz dodać np. MSG_PLAYER_DISCONNECTED
-        /*
         case MSG_PLAYER_DISCONNECTED: {
-            // ...
+            if (receivedSize == sizeof(PacketPlayerDisconnected)) {
+                PacketPlayerDisconnected disconnectPacket;
+                std::memcpy(&disconnectPacket, buffer, sizeof(PacketPlayerDisconnected));
+
+                gameManager->removeBoat(disconnectPacket.player_id);
+            }
             break;
         }
-        */
+        case MSG_TIMEOUT: {
+            if (receivedSize == sizeof(PacketTimeout)) {
+                PacketTimeout timeoutPacket;
+                std::memcpy(&timeoutPacket, buffer, sizeof(PacketTimeout));
+
+                gameManager->removeBoat(timeoutPacket.player_id);
+            }
+            break;
+        }
 
         default:
             std::cerr << "Received unknown message: " << header->type << "\n";

@@ -364,4 +364,6 @@ FodyWeavers.xsd
 
 .idea/
 cmake-build-*/
-CMakeFiles
+CMakeFiles/
+_deps/
+CMakeCache.txt

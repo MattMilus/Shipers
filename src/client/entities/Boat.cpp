@@ -56,8 +56,8 @@ void Boat::move(float deltaTime) {
 }
 
 void Boat::update(float deltaTime) {
-    handleRotation(deltaTime);
-    move(deltaTime);
+    this->handleRotation(deltaTime);
+    this->move(deltaTime);
 }
 
 void Boat::setThrottle(float newThrottle) {
@@ -79,14 +79,25 @@ bool Boat::isInCollider(sf::Vector2f point) {
     return (dx * dx + dy * dy) <= (COLLIDER_RADIUS * COLLIDER_RADIUS);
 }
 
+void Boat::setPosition(sf::Vector2f newPosition) {
+    position = newPosition;
+}
 
 sf::Vector2f Boat::getPosition() const { return position; }
+
+void Boat::setCurrentAngle(float newRotation) {
+    currentAngle = newRotation;
+}
+
 float Boat::getCurrentAngle() const { return currentAngle; }
+float Boat::getAngleCommand() const { return angleCommand; }
 sf::Vector2f Boat::getVelocity() const { return velocity; }
 
 float Boat::getSpeed() const {
     return std::sqrt((velocity.x * velocity.x) + (velocity.y * velocity.y));
 }
+
+float Boat::getThrottle() const { return throttle; }
 
 void Boat::debug(sf::RenderTarget& target) {
     if (ENV_APP_ENVIRONMENT != 1) return;

@@ -10,6 +10,7 @@
 #include <string>
 
 #include "ServerPackets.h"
+#include "../GameManager.h"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/Socket.hpp"
 #include "SFML/Network/UdpSocket.hpp"
@@ -17,7 +18,7 @@
 
 #include "../../env.h"
 
-int ConnectionManager::connectToServer() {
+int ConnectionManager::connectToServer(GameManager* game_manager) {
     std::string ipString;
     std::cout << "--- SHIPERS CLIENT ---\n";
     std::cout << "Enter server IP (eg. 127.0.0.1 for local game): ";
@@ -28,8 +29,12 @@ int ConnectionManager::connectToServer() {
         std::cerr << "Invalid IP address!\n";
         return -1;
     }
+    game_manager->setServerIpAddress(serverIp.value());
 
-    sf::UdpSocket socket;
+    auto* dynamicSocket = new sf::UdpSocket();
+    game_manager->setUdpSocket(dynamicSocket);
+
+    sf::UdpSocket& socket = *dynamicSocket;
 
     PacketConnect connectPacket {MSG_CONNECT};
 
@@ -55,15 +60,6 @@ int ConnectionManager::connectToServer() {
                 if (received == sizeof(PacketAccepted)) {
                     PacketAccepted acceptedPacket;
                     std::memcpy(&acceptedPacket, buffer, sizeof(PacketAccepted));
-
-                    PacketJoin joinPacket{
-                        MSG_JOIN,
-                        acceptedPacket.player_id
-                    };
-                    if (socket.send(&joinPacket, sizeof(joinPacket), *serverIp, ENV_SERVER_PORT) != sf::Socket::Status::Done) {
-                        std::cerr << "Error while connecting to server!\n";
-                        return -1;
-                    }
 
                     return acceptedPacket.player_id;
                 }

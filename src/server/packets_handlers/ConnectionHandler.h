@@ -6,9 +6,9 @@
 #define SHIPERS_CONNECTHANDLER_H
 
 #include "../ServerPackets.h"
+#include "../managers/GameManager.h"
 
-void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr);
-void player_join(char* buffer, int sock, struct sockaddr_in *client_addr);
+void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState);
 
 
 #endif //SHIPERS_CONNECTHANDLER_H

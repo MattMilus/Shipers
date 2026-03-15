@@ -12,7 +12,8 @@
 typedef enum uint32_t {
     MSG_CONNECT = 1,
     MSG_ACCEPTED = 2,
-    MSG_JOIN = 3
+    MSG_GAME_STATE = 100,
+    MSG_MOVE = 101
 } MessageType;
 
 typedef struct {
@@ -34,10 +35,28 @@ typedef struct {
 } PacketJoin;
 
 typedef struct {
-    MessageType type; // Zawsze MSG_MOVE
+    uint32_t type;
     int player_id;
     float x;
     float y;
+    float currentAngle;
+    float angleCommand;
+    float throttle;
 } PacketMove;
+
+typedef struct {
+    int player_id;
+    float x;
+    float y;
+    float currentAngle;
+    float angleCommand;
+    float throttle;
+} PlayerSnapshot;
+
+typedef struct {
+    uint32_t type;
+    int active_players_count;
+    PlayerSnapshot players[4];
+} PacketGameState;
 
 #endif //SHIPERS_MESSAGETYPEENUM_H

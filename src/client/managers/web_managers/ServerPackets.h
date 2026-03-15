@@ -12,8 +12,8 @@
 enum MessageType : std::uint32_t {
     MSG_CONNECT = 1,
     MSG_ACCEPTED = 2,
-    MSG_JOIN = 3,
-    MSG_MOVE = 10
+    MSG_GAME_STATE = 100,
+    MSG_MOVE = 101
 };
 
 struct MsgHeader {
@@ -34,12 +34,30 @@ struct PacketJoin {
     int player_id;
 };
 
-struct PacketMove {
-    MessageType type;
+typedef struct {
+    uint32_t type;
     int player_id;
     float x;
     float y;
-};
+    float currentAngle;
+    float angleCommand;
+    float throttle;
+} PacketMove;
+
+typedef struct {
+    int player_id;
+    float x;
+    float y;
+    float currentAngle;
+    float angleCommand;
+    float throttle;
+} PlayerSnapshot;
+
+typedef struct {
+    uint32_t type;
+    int active_players_count;
+    PlayerSnapshot players[4];
+} PacketGameState;
 
 #pragma pack(pop)
 #endif //SHIPERS_SERVERPACKETS_H

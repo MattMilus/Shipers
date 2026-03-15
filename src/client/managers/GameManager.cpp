@@ -9,15 +9,16 @@
 #include "SFML/Network/Socket.hpp"
 #include "web_managers/ConnectionManager.h"
 
-GameManager::GameManager() : playerId(0) {
+GameManager::GameManager() : playerId(0), serverIpAddress(sf::IpAddress::resolve("127.0.0.1").value()) {
     // Initialize any necessary game state here
 }
 
 int GameManager::connectToServer() {
-    const int id = ConnectionManager::connectToServer();
+    const int id = ConnectionManager::connectToServer(this);
     if (id == -1) {
         return -1;
     }
+    printf("connected with id %d", id);
 
     playerId = id;
     addPlayer(id, sf::Vector2f(400.f, 300.f));
@@ -29,9 +30,25 @@ int GameManager::addPlayer(int id, sf::Vector2f startPos) {
         if (activeBoats.size() >= 4) {
             return -1;
         }
-        activeBoats[id] = std::make_unique<Player>(startPos);
+        activeBoats[id] = std::make_unique<Player>(id, startPos);
         return id;
     }
+}
+
+void GameManager::setUdpSocket(sf::UdpSocket *socket) {
+    updSocket = socket;
+}
+
+sf::UdpSocket* GameManager::getUdpSocket() const {
+    return updSocket;
+}
+
+void GameManager::setServerIpAddress(sf::IpAddress ip) {
+    serverIpAddress = ip;
+}
+
+sf::IpAddress GameManager::getServerIpAddress() const {
+    return serverIpAddress;
 }
 
 int GameManager::addBoat(int id, sf::Vector2f startPos) {
@@ -42,6 +59,10 @@ int GameManager::addBoat(int id, sf::Vector2f startPos) {
         activeBoats[id] = std::make_unique<Boat>(startPos);
         return id;
     }
+}
+
+bool GameManager::hasBoat(const int id) {
+    return activeBoats.find(id) != activeBoats.end();
 }
 
 const std::map<int, std::unique_ptr<Boat>>& GameManager::getActiveBoats() const {
@@ -65,6 +86,10 @@ Player* GameManager::getPlayer() const {
         }
     }
     return nullptr;
+}
+
+int GameManager::getPlayerId() const {
+    return playerId;
 }
 
 // @todo: Function should be called by server on server side

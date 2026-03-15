@@ -11,10 +11,13 @@
 #include <SFML/Window/Keyboard.hpp>
 
 class Player : public Boat {
+    int playerId;
 public:
-    Player(sf::Vector2f startPos);
+    Player(int playerId, sf::Vector2f startPos);
 
     void handleInput(float deltaTime);
+
+    [[nodiscard]] int getPlayerId() const;
 };
 
 

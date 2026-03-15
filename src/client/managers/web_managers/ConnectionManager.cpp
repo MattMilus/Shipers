@@ -70,3 +70,16 @@ int ConnectionManager::connectToServer(GameManager* game_manager) {
     std::cerr << "No response from the server (Timeout). Make sure the server is working.\n";
     return -1;
 }
+
+int ConnectionManager::disconnectFromServer(GameManager *game_manager) {
+    PacketDisconnect disconnectPacket;
+    disconnectPacket.type = MSG_DISCONNECT;
+    disconnectPacket.player_id = game_manager->getPlayerId();
+
+    if (game_manager->getUdpSocket()->send(&disconnectPacket, sizeof(disconnectPacket), game_manager->getServerIpAddress(), ENV_SERVER_PORT) != sf::Socket::Status::Done) {
+        std::cerr << "Error while disconnecting from server!\n";
+        return -1;
+    }
+
+    return 0;
+}

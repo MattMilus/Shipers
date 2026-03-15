@@ -29,6 +29,11 @@ void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *cl
             movePlayer(buffer, sock, client_addr, gameState);
             break;
         }
+        case MSG_DISCONNECT: {
+            fprintf(stderr, "Received message DISCONNECT\n");
+            player_disconnect(buffer, sock, client_addr, gameState);
+            break;
+        }
 
 
         default:

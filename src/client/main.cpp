@@ -4,7 +4,6 @@
 #include <cstring>
 #include <map>
 
-#include "managers/web_managers/ServerPackets.h"
 #include "managers/GameManager.h"
 #include "managers/Renderer.h"
 #include "entities/Player.h"
@@ -32,13 +31,6 @@ int main() {
         std::cerr << "Error connecting to server." << std::endl;
         return -1;
     }
-
-    // @Todo: Change after connecting to server to create remote player when server tells you about new player joining
-    int remotePlayerId = 2;
-    gameManager->addBoat(remotePlayerId, sf::Vector2f(200.f, 200.f));
-    // @Todo: If you want to test 2 player movement simultaneously uncomment line below and comment one above
-    // @Todo: Remember to get rid of this after connecting to server
-    //gameManager->addPlayer(remotePlayerId, sf::Vector2f(200.f, 200.f));
 
     Clock globalClock;
     Clock deltaClock;

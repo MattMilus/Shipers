@@ -29,21 +29,19 @@ void StateManager::sendMoveInformation(GameManager *gameManager) {
         );
 
         if (status != sf::Socket::Status::Done) {
-            std::cerr << "Error while sending move packet! Powod: ";
+            std::cerr << "Error while sending move packet! Reason: ";
 
             if (status == sf::Socket::Status::NotReady) {
-                std::cerr << "[NotReady] Bufor pelny! Wysylasz pakiety za szybko (brak limitu 30Hz?).\n";
+                std::cerr << "[NotReady] Buffer full! Sending packets too fast (maybe without 30Hz limit?).\n";
             }
             else if (status == sf::Socket::Status::Error) {
-                // To wyciągnie IP jako tekst, żebyśmy zobaczyli, czy nie jest zepsute
-                std::cerr << "[Error] Blad gniazda lub zly adres IP! Adres to: "
-                          << gameManager->getServerIpAddress().toString() << "\n";
+                std::cerr << "[Error] Socket error or invalid ip address: ";
             }
             else if (status == sf::Socket::Status::Disconnected) {
-                std::cerr << "[Disconnected] Gniazdo zostalo zamkniete.\n";
+                std::cerr << "[Disconnected] Socket closed.\n";
             }
             else {
-                std::cerr << "Nieznany kod bledu SFML.\n";
+                std::cerr << "Unknown SFML error code.\n";
             }
         }
     }

@@ -27,3 +27,7 @@ void Player::handleInput(float deltaTime) {
         addToAngleCommand(steeringSpeed * deltaTime);
     }
 }
+
+int Player::getPlayerId() const {
+    return playerId;
+}

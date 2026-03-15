@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\dec77202f58c824934430289b91c0aac\freetype-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\dec77202f58c824934430289b91c0aac\freetype-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\dec77202f58c824934430289b91c0aac\freetype-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\dec77202f58c824934430289b91c0aac\freetype-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\dec77202f58c824934430289b91c0aac\freetype-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\dec77202f58c824934430289b91c0aac\freetype-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\dec77202f58c824934430289b91c0aac\freetype-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\dec77202f58c824934430289b91c0aac\freetype-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\b35a410318b8c54d06d6b90e3c0e1ca6\freetype-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\51f38e86f53c8331101fb0f7b6c70511\freetype-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\pliki\studia\semestr 4\Rozporszone\Projekt\Shipers\_deps\freetype-subbuild\CMakeFiles\freetype-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{C5BF4E65-FB81-3CFF-95BA-03BC83A4B7A5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

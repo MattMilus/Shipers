@@ -15,7 +15,6 @@ void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, 
     if (new_player_id == -1) {
         // Wyślij do klienta pakiet z błędem np. MSG_SERVER_FULL
     } else {
-        printf("Player with id %d\n", new_player_id);
         PacketAccepted response;
         response.type = MSG_ACCEPTED;
         response.player_id = new_player_id;

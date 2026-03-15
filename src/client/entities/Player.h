@@ -16,6 +16,8 @@ public:
     Player(int playerId, sf::Vector2f startPos);
 
     void handleInput(float deltaTime);
+
+    [[nodiscard]] int getPlayerId() const;
 };
 
 

@@ -5,8 +5,12 @@
 #include "Renderer.h"
 
 #include <iostream>
+#include <SFML/Graphics/CircleShape.hpp>
 
-Renderer::Renderer(GameManager* game_manager) : gameManager(game_manager), boatSprite(boatTexture) {
+Renderer::Renderer(GameManager* game_manager) 
+    : gameManager(game_manager), 
+      boatSprite(boatTexture),
+      resolution(800.f, 600.f) {
 }
 
 void Renderer::loadShaders() {
@@ -18,8 +22,8 @@ void Renderer::loadShaders() {
         std::cerr << "Failed to load wave shader\n";
     }
 
-    checkerShader.setUniform("uResolution", sf::Glsl::Vec2(800.f, 600.f));
-    waveShader.setUniform("uResolution", sf::Glsl::Vec2(800.f, 600.f));
+    checkerShader.setUniform("uResolution", resolution);
+    waveShader.setUniform("uResolution", resolution);
 }
 
 void Renderer::loadTextures() {
@@ -79,6 +83,7 @@ void Renderer::renderBackground(float time) {
     waveShader.setUniform("image", renderTex.getTexture());
     waveShader.setUniform("uTime", time);
     waveShader.setUniformArray("uPathHistory", uPathHistory, TOTAL_HISTORY_SIZE);
+    waveShader.setUniform("uPlayerId", gameManager->getPlayerId());
 
     window.clear();
     window.draw(screenQuad, &waveShader);
@@ -87,7 +92,10 @@ void Renderer::renderBackground(float time) {
 void Renderer::renderBoats() {
     // Rendering boats
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
-        boatSprite.setPosition(boat->getPosition());
+        boatSprite.setPosition(
+            boat->getPosition() - gameManager->getPlayer()->getPosition()
+            + sf::Glsl::Vec2(resolution.x * 0.5, resolution.y * 0.5)
+        );
         boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
         window.draw(boatSprite);
     }
@@ -105,6 +113,20 @@ void Renderer::debug() {
     if (ENV_APP_ENVIRONMENT != 1) return;
 
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
-        boat->debug(window);
+        if (ENV_APP_ENVIRONMENT != 1) return;
+
+        sf::CircleShape colliderCircle(COLLIDER_RADIUS);
+
+        colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
+        colliderCircle.setPosition(
+            boat->getPosition() - gameManager->getPlayer()->getPosition()
+            + sf::Glsl::Vec2(resolution.x * 0.5, resolution.y * 0.5)
+        );
+
+        colliderCircle.setFillColor(sf::Color::Transparent);
+        colliderCircle.setOutlineColor(sf::Color::Red);
+        colliderCircle.setOutlineThickness(2.f);
+
+        window.draw(colliderCircle);
     }
 }

@@ -98,18 +98,3 @@ float Boat::getSpeed() const {
 }
 
 float Boat::getThrottle() const { return throttle; }
-
-void Boat::debug(sf::RenderTarget& target) {
-    if (ENV_APP_ENVIRONMENT != 1) return;
-
-    sf::CircleShape colliderCircle(COLLIDER_RADIUS);
-
-    colliderCircle.setOrigin({COLLIDER_RADIUS, COLLIDER_RADIUS});
-    colliderCircle.setPosition(position);
-
-    colliderCircle.setFillColor(sf::Color::Transparent);
-    colliderCircle.setOutlineColor(sf::Color::Red);
-    colliderCircle.setOutlineThickness(2.f);
-
-    target.draw(colliderCircle);
-}

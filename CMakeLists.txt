@@ -71,4 +71,13 @@ else()
             SFML::System
             SFML::Network
     )
+
+    add_custom_command(TARGET ShipersClient POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E remove_directory
+        "$<TARGET_FILE_DIR:ShipersClient>/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/src/client/assets"
+        "$<TARGET_FILE_DIR:ShipersClient>/assets"
+        COMMENT "Kopiowanie assets..."
+    )
 endif()

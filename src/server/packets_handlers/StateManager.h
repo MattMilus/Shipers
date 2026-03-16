@@ -9,7 +9,6 @@
 
 void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState);
 
-void* timeout_checker(void* arg);
 void* state_broadcaster(void* arg);
 
 #endif //SHIPERS_STATEMANAGER_H

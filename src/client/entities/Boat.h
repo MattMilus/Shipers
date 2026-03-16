@@ -20,9 +20,11 @@ private:
     void move(float deltaTime);
 protected:
     sf::Vector2f position;
+    sf::Vector2f targetPosition;
     sf::Vector2f velocity;
 
     float currentAngle;
+    float targetAngle;
     float angleCommand;
 
     float throttle;
@@ -37,7 +39,8 @@ public:
     Boat(sf::Vector2f startPos);
     virtual ~Boat() = default;
 
-    void update(float deltaTime);
+    void updateLocal(float deltaTime);
+    void updateRemote(float deltaTime);
 
     void setThrottle(float newThrottle);
     void addToAngleCommand(float angleInDegrees);
@@ -46,8 +49,10 @@ public:
     bool isInCollider(sf::Vector2f position);
 
     void setPosition(sf::Vector2f newPosition);
+    void setTargetPosition(sf::Vector2f newPosition);
     sf::Vector2f getPosition() const;
     void setCurrentAngle(float newRotation );
+    void setTargetAngle(float newAngle);
     float getCurrentAngle() const;
     float getAngleCommand() const;
     sf::Vector2f getVelocity() const;

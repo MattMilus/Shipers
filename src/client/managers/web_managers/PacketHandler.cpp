@@ -21,13 +21,11 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
     switch (header->type) {
 
         case MSG_GAME_STATE: {
-            printf("Received MSG_GAME_STATE\n");
             if (receivedSize == sizeof(PacketGameState)) {
                 PacketGameState statePacket;
                 std::memcpy(&statePacket, buffer, sizeof(PacketGameState));
 
                 for (int i = 0; i < statePacket.active_players_count; i++) {
-                    printf("player %d on pos %f, %f", i, statePacket.players[i].x, statePacket.players[i].y);
                     int remoteId = statePacket.players[i].player_id;
 
                     if (remoteId != gameManager->getPlayerId()) {
@@ -36,22 +34,33 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                         }
 
                         Boat* remoteBoat = gameManager->getBoatById(remoteId);
-                        remoteBoat->setPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
-                        remoteBoat->setCurrentAngle(statePacket.players[i].currentAngle);
+
+                        remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
+                        remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
                         remoteBoat->setThrottle(statePacket.players[i].throttle);
                     }
                 }
             }
             break;
         }
-
-        // Tutaj w przyszłości możesz dodać np. MSG_PLAYER_DISCONNECTED
-        /*
         case MSG_PLAYER_DISCONNECTED: {
-            // ...
+            if (receivedSize == sizeof(PacketPlayerDisconnected)) {
+                PacketPlayerDisconnected disconnectPacket;
+                std::memcpy(&disconnectPacket, buffer, sizeof(PacketPlayerDisconnected));
+
+                gameManager->removeBoat(disconnectPacket.player_id);
+            }
             break;
         }
-        */
+        case MSG_TIMEOUT: {
+            if (receivedSize == sizeof(PacketTimeout)) {
+                PacketTimeout timeoutPacket;
+                std::memcpy(&timeoutPacket, buffer, sizeof(PacketTimeout));
+
+                gameManager->removeBoat(timeoutPacket.player_id);
+            }
+            break;
+        }
 
         default:
             std::cerr << "Received unknown message: " << header->type << "\n";

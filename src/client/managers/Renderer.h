@@ -25,6 +25,9 @@ private:
     GameManager* gameManager;
 
     sf::RenderWindow window;
+    sf::Glsl::Vec2 resolution;
+
+
     sf::Glsl::Vec2 uPathHistory[TOTAL_HISTORY_SIZE];
     sf::Shader checkerShader;
     sf::Shader waveShader;

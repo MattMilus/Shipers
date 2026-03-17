@@ -35,5 +35,6 @@ typedef struct {
 } Boat;
 
 void boat_init(Boat* boat, Vector2f start_pos);
+void boat_update_physics(Boat* boat, float deltaTime);
 
 #endif //SHIPERS_BOAT_H

@@ -5,7 +5,7 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --------------------------------------------------------
 # 1. Server
@@ -64,6 +64,10 @@ else()
             src/client/managers/web_managers/PacketHandler.cpp
             src/client/managers/web_managers/PacketHandler.h
     )
+
+    if(MINGW)
+        target_link_options(ShipersClient PRIVATE -static -static-libgcc -static-libstdc++)
+    endif()
 
     target_link_libraries(ShipersClient PRIVATE
             SFML::Graphics

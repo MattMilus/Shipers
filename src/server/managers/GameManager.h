@@ -35,5 +35,6 @@ void game_manager_init(GameState* state, int listenfd_socket);
 int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr);
 void game_manager_remove_player(GameState* state, int playerId);
 void game_manager_update_activity(GameState* state, int playerId);
+void game_manager_resolve_collisions(GameState* state);
 
 #endif //SHIPERS_GAMEMANAGER_H

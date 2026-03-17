@@ -29,6 +29,8 @@ int main() {
 
     if (gameManager->connectToServer() == -1) {
         std::cerr << "Error connecting to server." << std::endl;
+        std::cerr << "\nProgram zakonczony. Nacisnij Enter, aby zamknac...";
+        std::cin.get();
         return -1;
     }
 

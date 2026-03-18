@@ -27,7 +27,6 @@ void main() {
     vec2 totalDir = vec2(0, 0);
     vec2 ambientWavesDir = vec2(x, y);
 
-    // chromatic aberration spread per channel
     vec3 totalOffsets = vec3(0.0);
 
     for (int i = 0; i < 256; ++i) {

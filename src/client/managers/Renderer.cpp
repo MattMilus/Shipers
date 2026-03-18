@@ -112,11 +112,9 @@ void Renderer::render(float time) {
 void Renderer::debug() {
     if (ENV_APP_ENVIRONMENT != 1) return;
 
+    sf::CircleShape colliderCircle(COLLIDER_RADIUS);
+
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
-        if (ENV_APP_ENVIRONMENT != 1) return;
-
-        sf::CircleShape colliderCircle(COLLIDER_RADIUS);
-
         colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
         colliderCircle.setPosition(
             boat->getPosition() - gameManager->getPlayer()->getPosition()

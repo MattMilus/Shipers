@@ -6,6 +6,7 @@
 
 #include <cstring>
 #include <iostream>
+#include "../Terminal.h"
 
 #include "ServerPackets.h"
 
@@ -21,13 +22,13 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
     switch (header->type) {
 
         case MSG_GAME_STATE: {
-            printf("Received MSG_GAME_STATE\n");
+            printAt(0, 3, "Received MSG_GAME_STATE\n");
             if (receivedSize == sizeof(PacketGameState)) {
                 PacketGameState statePacket;
                 std::memcpy(&statePacket, buffer, sizeof(PacketGameState));
 
                 for (int i = 0; i < statePacket.active_players_count; i++) {
-                    printf("player %d on pos %f, %f", i, statePacket.players[i].x, statePacket.players[i].y);
+                    printAt(0, 4 + i, "player %d on pos %f, %f", i, statePacket.players[i].x, statePacket.players[i].y);
                     int remoteId = statePacket.players[i].player_id;
 
                     if (remoteId != gameManager->getPlayerId()) {

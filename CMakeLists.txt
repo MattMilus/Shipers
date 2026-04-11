@@ -63,7 +63,7 @@ else()
             src/client/managers/web_managers/StateManager.h
             src/client/managers/web_managers/PacketHandler.cpp
             src/client/managers/web_managers/PacketHandler.h
-    )
+     "src/client/managers/Terminal.h" "src/client/managers/Terminal.cpp")
 
     target_link_libraries(ShipersClient PRIVATE
             SFML::Graphics

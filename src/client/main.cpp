@@ -23,6 +23,8 @@ Vector2f normalize(const Vector2f& source) {
 }
 
 int main() {
+    printf("\033[2J\033[1;1H"); // 'Clear' console
+
     GameManager *gameManager = new GameManager();
     Renderer *renderer = new Renderer(gameManager);
     RenderWindow& window = *renderer->initialize();
@@ -36,6 +38,14 @@ int main() {
     Clock deltaClock;
     Clock networkClock;
     const float NETWORK_TICK_RATE = 1.0f / 30.0f;
+
+    size_t panelId = renderer->addPanel();
+    Panel& debugPanel = renderer->getPanel(panelId);
+    debugPanel.setPosition({ 10.f, 10.f });
+    debugPanel.setSize({ 220.f, 100.f });
+    debugPanel.setBorderThickness(2.f);
+    debugPanel.setBorderColor(sf::Color::Red);
+    debugPanel.setTextColor(sf::Color::Red);
 
     while (window.isOpen()) {
         float time = globalClock.getElapsedTime().asSeconds();
@@ -68,8 +78,18 @@ int main() {
             networkClock.restart();
         }
 
+        debugPanel.setText("Player position: (%.2f, %.2f)\nPlayer angle: %.2f\nActive boats: %zu",
+            gameManager->getPlayer()->getPosition().x,
+            gameManager->getPlayer()->getPosition().y,
+            gameManager->getPlayer()->getCurrentAngle(),
+            gameManager->getActiveBoats().size()
+        );
+
+
         renderer->render(time);
     }
+
+    printf("\033[2J\033[1;1H"); // 'Clear' console
 
     return 0;
 }

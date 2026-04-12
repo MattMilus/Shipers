@@ -362,9 +362,12 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+.vs/
+out/
 .idea/
 cmake-build-*/
 CMakeFiles/
 serverOut/
+clientOut/
 _deps/
 CMakeCache.txt

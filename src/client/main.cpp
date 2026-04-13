@@ -11,6 +11,7 @@
 #include "managers/web_managers/StateManager.h"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/UdpSocket.hpp"
+#include "managers/Terminal.h"
 
 using namespace sf;
 
@@ -43,17 +44,41 @@ int main() {
     Panel& debugPanel = renderer->getPanel(panelId);
     debugPanel.setPosition({ 10.f, 10.f });
     debugPanel.setSize({ 220.f, 100.f });
-    debugPanel.setBorderThickness(2.f);
-    debugPanel.setBorderColor(sf::Color::Red);
-    debugPanel.setTextColor(sf::Color::Red);
+    debugPanel.setStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
+	debugPanel.setText("I'm not held");
+
+    debugPanel.setHeldStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
+    debugPanel.setHeldText("I'm held now");
+
+    debugPanel.makeButton([&debugPanel]() {
+        static int clickCnt = 0; 
+        printAt(0, 10, "button was clicked %d times", ++clickCnt); 
+    });
 
     while (window.isOpen()) {
         float time = globalClock.getElapsedTime().asSeconds();
         float deltaTime = deltaClock.restart().asSeconds();
 
+        
+
         while (const auto event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>())
                 window.close();
+
+
+
+            if (event->is<sf::Event::MouseButtonPressed>()) {
+                sf::Vector2f mousePos = { (float)sf::Mouse::getPosition(window).x,  (float)sf::Mouse::getPosition(window).y };
+                size_t buttonId = renderer->getButtonIdAt(mousePos);
+
+                if (buttonId != -1) {
+                    renderer->getPanel(buttonId).click();
+                }
+
+			} else if (event->is<sf::Event::MouseButtonReleased>()) {
+                renderer->releaseAllButtons();
+            }
+
         }
 
         if (Player* localPlayer = gameManager->getPlayer()) {
@@ -78,13 +103,15 @@ int main() {
             networkClock.restart();
         }
 
-        debugPanel.setText("Player position: (%.2f, %.2f)\nPlayer angle: %.2f\nActive boats: %zu",
-            gameManager->getPlayer()->getPosition().x,
-            gameManager->getPlayer()->getPosition().y,
-            gameManager->getPlayer()->getCurrentAngle(),
-            gameManager->getActiveBoats().size()
-        );
+        //debugPanel.setText("Player position: (%.2f, %.2f)\nPlayer angle: %.2f\nActive boats: %zu",
+        //    gameManager->getPlayer()->getPosition().x,
+        //    gameManager->getPlayer()->getPosition().y,
+        //    gameManager->getPlayer()->getCurrentAngle(),
+        //    gameManager->getActiveBoats().size()
+        //);
 
+        
+        
 
         renderer->render(time);
     }

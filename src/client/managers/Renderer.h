@@ -13,6 +13,7 @@
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Text.hpp>
+#include <functional>
 
 #include "GameManager.h"
 #include "../env.h"
@@ -26,25 +27,50 @@ class Panel {
 private:
     sf::Vector2f position;
     sf::RectangleShape background;
+    sf::RectangleShape clickedBackground;
 
     sf::Text text;
-
-    bool isClickable;
+	sf::Text clickedText;
+    bool button = false;
+	bool held = false;
+    std::function<void()> onClick;
 
 public:
     Panel();
 
-    void setFont(const std::string& fontPath);
     void setFontSize(unsigned int size);
     void setText(const char* format, ...);
+	void setHeldText(const char* format, ...);
 
-    void setPosition(const sf::Vector2f& pos) { background.setPosition(pos); text.setPosition(pos); }
-    void setSize(const sf::Vector2f& sz) { background.setSize(sz); }
-    void setTextColor(const sf::Color& color) { text.setFillColor(color); }
-    void setBackgroundColor(const sf::Color& color) { background.setFillColor(color); }
-    void setBorderThickness(float thickness) { background.setOutlineThickness(thickness); }
-    void setBorderColor(const sf::Color& color) { background.setOutlineColor(color); }
-    void setClickable(bool clickable) { isClickable = clickable; }
+    void setPosition(const sf::Vector2f& pos) { 
+        background.setPosition(pos); text.setPosition(pos); 
+		clickedBackground.setPosition(pos); clickedText.setPosition(pos);
+    }
+    void setSize(const sf::Vector2f& sz) { background.setSize(sz); clickedBackground.setSize(sz); }
+
+    void setStyle(const sf::Color& txtColor, int fontSize, const sf::Color& bgColor, const sf::Color& bdColor, float thickness) {
+        text.setFillColor(txtColor);
+		text.setCharacterSize(fontSize);
+        background.setFillColor(bgColor);
+		background.setOutlineThickness(thickness);
+        background.setOutlineColor(bdColor);
+    }
+	void setHeldStyle(const sf::Color& txtColor, int fontSize, const sf::Color& bgColor, const sf::Color& bdColor, float thickness) {
+        clickedText.setFillColor(txtColor);
+        clickedText.setCharacterSize(fontSize);
+		clickedBackground.setFillColor(bgColor);
+        clickedBackground.setOutlineColor(bdColor);
+		clickedBackground.setOutlineThickness(thickness);
+	}
+	void switchStyle() { held = !held, std::swap(background, clickedBackground); std::swap(text, clickedText); }
+
+    void makeButton(std::function <void()> func) { button = true; onClick.swap(func); } // Who will ever unmake a button? :P
+	bool isButton() { return button; }
+	bool isHeld() { return held; }
+
+	bool contains(const sf::Vector2f& point) const { return background.getGlobalBounds().contains(point); } 
+    void click() { if (button && onClick) onClick(); switchStyle(); }
+
     void draw(sf::RenderWindow& window);
 };
 
@@ -80,6 +106,8 @@ public:
     void render(float time);
     size_t addPanel() { panels.emplace_back(); return panels.size() - 1; }
     Panel& getPanel(size_t index) { return panels.at(index); }
+    size_t getButtonIdAt(const sf::Vector2f& pos);
+    void releaseAllButtons();
     void debug();
 };
 

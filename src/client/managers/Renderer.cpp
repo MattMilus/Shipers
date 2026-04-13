@@ -12,10 +12,7 @@
 sf::Font arial("assets/fonts/arial.ttf"); 
 
 
-Panel::Panel() : text(arial) {
-    text.setCharacterSize(14);
-    text.setFillColor(sf::Color::White);
-
+Panel::Panel() : text(arial), clickedText(arial) {
 }
 
 void Panel::setFontSize(unsigned int size) {
@@ -31,6 +28,15 @@ void Panel::setText(const char* format, ...) {
     text.setString(buffer);
 }
 
+void Panel::setHeldText(const char* format, ...) {
+	char buffer[256];
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof(buffer), format, args);
+	va_end(args);
+	clickedText.setString(buffer);
+}
+
 void Panel::draw(sf::RenderWindow& window) {
     window.draw(background);
     window.draw(text);
@@ -40,6 +46,19 @@ Renderer::Renderer(GameManager* game_manager)
     : gameManager(game_manager), 
       boatSprite(boatTexture),
       resolution(800.f, 600.f) {
+}
+
+size_t Renderer::getButtonIdAt(const sf::Vector2f& pos) {
+    for (size_t i = 0; i < panels.size(); ++i) {
+        if (panels[i].isButton() && panels[i].contains(pos)) return i;
+    }
+    return -1;
+}
+
+void Renderer::releaseAllButtons() {
+	for (Panel& panel : panels) {
+		if (panel.isHeld()) panel.switchStyle();
+	}
 }
 
 void Renderer::loadShaders() {
@@ -137,7 +156,6 @@ void Renderer::render(float time) {
     debug();
     for(Panel& panel : panels) {
         panel.draw(window);
-        printAt(0, 10, "printing");
     }
     window.display();
 }

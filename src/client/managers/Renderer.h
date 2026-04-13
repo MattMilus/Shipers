@@ -44,7 +44,7 @@ public:
 
     void setPosition(const sf::Vector2f& pos) { 
         background.setPosition(pos); text.setPosition(pos); 
-		clickedBackground.setPosition(pos); clickedText.setPosition(pos);
+        clickedBackground.setPosition(pos); clickedText.setPosition(pos);
     }
     void setSize(const sf::Vector2f& sz) { background.setSize(sz); clickedBackground.setSize(sz); }
 

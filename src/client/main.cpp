@@ -35,6 +35,9 @@ int main() {
         return -1;
     }
 
+	auto regCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
+	auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
+
     Clock globalClock;
     Clock deltaClock;
     Clock networkClock;
@@ -42,15 +45,17 @@ int main() {
 
     size_t panelId = renderer->addPanel();
     Panel& debugPanel = renderer->getPanel(panelId);
+
     debugPanel.setPosition({ 10.f, 10.f });
     debugPanel.setSize({ 220.f, 100.f });
+
     debugPanel.setStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
 	debugPanel.setText("I'm not held");
 
     debugPanel.setHeldStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
     debugPanel.setHeldText("I'm held now");
 
-    debugPanel.makeButton([&debugPanel]() {
+    debugPanel.makeButton([]() {
         static int clickCnt = 0; 
         printAt(0, 10, "button was clicked %d times", ++clickCnt); 
     });
@@ -65,18 +70,19 @@ int main() {
             if (event->is<sf::Event::Closed>())
                 window.close();
 
+            sf::Vector2f mousePos = { (float)sf::Mouse::getPosition(window).x,  (float)sf::Mouse::getPosition(window).y };
+            size_t buttonId = renderer->getButtonIdAt(mousePos);
 
-
-            if (event->is<sf::Event::MouseButtonPressed>()) {
-                sf::Vector2f mousePos = { (float)sf::Mouse::getPosition(window).x,  (float)sf::Mouse::getPosition(window).y };
-                size_t buttonId = renderer->getButtonIdAt(mousePos);
-
-                if (buttonId != -1) {
+            if (buttonId != -1) {
+				window.setMouseCursor(*handCursor);
+                if (event->is<sf::Event::MouseButtonPressed>()) {
                     renderer->getPanel(buttonId).click();
                 }
-
-			} else if (event->is<sf::Event::MouseButtonReleased>()) {
-                renderer->releaseAllButtons();
+                else if (event->is<sf::Event::MouseButtonReleased>()) {
+                    renderer->releaseAllButtons();
+                }
+            }  else {
+                window.setMouseCursor(*regCursor);
             }
 
         }

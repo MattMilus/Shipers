@@ -39,11 +39,14 @@ int main() {
 	auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
 	auto textCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Text);
 
+
     Clock globalClock;
     Clock deltaClock;
     Clock networkClock;
     const float NETWORK_TICK_RATE = 1.0f / 30.0f;
-
+        
+    std::string text;
+	bool isWriting = false;
     size_t panelId = renderer->addPanel();
     Panel& debugPanel = renderer->getPanel(panelId);
 
@@ -54,19 +57,18 @@ int main() {
     debugPanel.setText("Click me to write");
 
     debugPanel.setHeldStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
-	debugPanel.setHeldText("Write text here...");
-    
-    std::string text;
-	bool isWriting = false;
+    debugPanel.setHeldText("Write text here...");
+
     debugPanel.setButton([&text, &isWriting, &debugPanel]() {
         if (!debugPanel.changeStyle) debugPanel.switchStyle();
 
         text = debugPanel.getText();
         isWriting = !isWriting;
-    });
+        });
     debugPanel.setHover([&debugPanel, &window, &textCursor]() {
         window.setMouseCursor(*textCursor);
-    });
+        });
+
 
     while (window.isOpen()) {
         float time = globalClock.getElapsedTime().asSeconds();
@@ -100,7 +102,7 @@ int main() {
                 } else {
                     text += ch;
                 }
-                debugPanel.setText(text.c_str());
+                renderer->getPanel(panelId).setText(text.c_str());
             }
         }
 
@@ -125,16 +127,6 @@ int main() {
             StateManager::sendMoveInformation(gameManager);
             networkClock.restart();
         }
-
-        //debugPanel.setText("Player position: (%.2f, %.2f)\nPlayer angle: %.2f\nActive boats: %zu",
-        //    gameManager->getPlayer()->getPosition().x,
-        //    gameManager->getPlayer()->getPosition().y,
-        //    gameManager->getPlayer()->getCurrentAngle(),
-        //    gameManager->getActiveBoats().size()
-        //);
-
-        
-        
 
         renderer->render(time);
     }

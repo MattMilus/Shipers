@@ -50,6 +50,10 @@ else()
             src/client/main.cpp
             src/client/managers/Renderer.cpp
             src/client/managers/Renderer.h
+            src/client/managers/Panel.cpp
+            src/client/managers/Panel.h
+            src/client/managers/Terminal.cpp
+            src/client/managers/Terminal.h
             src/client/managers/GameManager.cpp
             src/client/managers/GameManager.h
             src/client/entities/Player.cpp

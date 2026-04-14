@@ -20,7 +20,6 @@ private:
 
     sf::UdpSocket* updSocket;
     sf::IpAddress serverIpAddress;
-	char keyBuffer[2048];
 
     int addPlayer(int id, sf::Vector2f startPos);
 public:
@@ -29,8 +28,6 @@ public:
     int connectToServer();
 
     void handleCollisions();
-
-    void keyLog(sf::Keyboard::Key key);
 
     // Returns the player ID (index) of the newly added player, or -1 if max players reached
 

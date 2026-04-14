@@ -4,7 +4,6 @@ uniform sampler2D image;
 uniform vec2 uResolution;
 uniform float uTime;
 uniform vec2 uPathHistory[256];
-uniform int uPlayerId;
 
 float speed = 0.3;
 float waveStrength = 0.03;
@@ -19,7 +18,7 @@ float getOffset(float age, float dist) {
 void main() {
     vec2 pos = gl_FragCoord.xy / uResolution;
     pos.y = 1.0 - pos.y; // visual fix
-    vec2 camera = uPathHistory[uPlayerId-1] - vec2(0.5);
+    vec2 camera = uPathHistory[0] - vec2(0.5);
     pos += camera;
 
     float x = sin(pos.y * 6.78 + uTime) * 0.05;
@@ -27,6 +26,7 @@ void main() {
     vec2 totalDir = vec2(0, 0);
     vec2 ambientWavesDir = vec2(x, y);
 
+    // chromatic aberration spread per channel
     vec3 totalOffsets = vec3(0.0);
 
     for (int i = 0; i < 256; ++i) {
@@ -45,9 +45,9 @@ void main() {
     }
 
     // pseudo piana do poprawy
-    float r = texture(image, fract(pos + ambientWavesDir + totalDir * (0.5 + totalOffsets.r))).r + abs(totalDir.x) * 1.2;
-    float g = texture(image, fract(pos + ambientWavesDir + totalDir * (0.5 + totalOffsets.g))).g + abs(totalDir.x) * 1.2;
-    float b = texture(image, fract(pos + ambientWavesDir + totalDir * (0.25 + totalOffsets.b))).b + abs(totalDir.x) * 1.0;
+    float r = texture(image, pos + ambientWavesDir + totalDir * (0.5 + totalOffsets.r)).r + abs(totalDir.x) * 5.0;
+    float g = texture(image, pos + ambientWavesDir + totalDir * (0.5 + totalOffsets.g)).g + abs(totalDir.x) * 5.0;
+    float b = texture(image, pos + ambientWavesDir + totalDir * (0.25 + totalOffsets.b)).b + abs(totalDir.x) * 5.0;
 
     colour = vec4(r, g, b, 1.0);
 }

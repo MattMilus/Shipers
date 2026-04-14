@@ -6,11 +6,27 @@
 
 #include <iostream>
 #include <SFML/Graphics/CircleShape.hpp>
+#include "Terminal.h"
+
+
 
 Renderer::Renderer(GameManager* game_manager) 
     : gameManager(game_manager), 
       boatSprite(boatTexture),
       resolution(800.f, 600.f) {
+}
+
+size_t Renderer::getPanelIdAt(const sf::Vector2f& pos) {
+    for (size_t i = 0; i < panels.size(); ++i) {
+        if (panels[i].contains(pos)) return i;
+    }
+    return -1;
+}
+
+void Renderer::releaseAllButtons() {
+	for (Panel& panel : panels) {
+		if (panel.changeStyle) panel.switchStyle();
+	}
 }
 
 void Renderer::loadShaders() {
@@ -106,17 +122,18 @@ void Renderer::render(float time) {
     renderBackground(time);
     renderBoats();
     debug();
+    for(Panel& panel : panels) {
+        panel.draw(window);
+    }
     window.display();
 }
 
 void Renderer::debug() {
     if (ENV_APP_ENVIRONMENT != 1) return;
 
+    sf::CircleShape colliderCircle(COLLIDER_RADIUS);
+
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
-        if (ENV_APP_ENVIRONMENT != 1) return;
-
-        sf::CircleShape colliderCircle(COLLIDER_RADIUS);
-
         colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
         colliderCircle.setPosition(
             boat->getPosition() - gameManager->getPlayer()->getPosition()

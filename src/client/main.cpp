@@ -62,12 +62,14 @@ int main() {
         }
 
         for (auto& [id, boat] : gameManager->getActiveBoats()) {
-            if (id == gameManager->getPlayerId()) {
-                boat->updateLocal(deltaTime);
-            } else {
+            //if (id == gameManager->getPlayerId()) {
+            //    boat->updateLocal(deltaTime);
+            //} else {
                 boat->updateRemote(deltaTime);
-            }
+            //}
         }
+
+        gameManager->handleCollisions();
 
         if (networkClock.getElapsedTime().asSeconds() >= NETWORK_TICK_RATE) {
             StateManager::sendMoveInformation(gameManager);

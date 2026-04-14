@@ -4,10 +4,13 @@
 
 #include "GameManager.h"
 #include <cmath>
+#include <cstring>
+#include <bits/fs_fwd.h>
 
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/Socket.hpp"
 #include "web_managers/ConnectionManager.h"
+#include "../ServerPackets.h"
 
 GameManager::GameManager() : playerId(0), serverIpAddress(sf::IpAddress::resolve("127.0.0.1").value()) {
     // Initialize any necessary game state here
@@ -21,8 +24,29 @@ int GameManager::connectToServer() {
     printf("connected with id %d", id);
 
     playerId = id;
-    addPlayer(id, sf::Vector2f(400.f, 300.f));
+    addPlayer(id, sf::Vector2f(100.f, 300.f));
     return playerId;
+}
+
+void GameManager::startGame(char* buffer, std::size_t receivedSize) {
+    printf("Received start game");
+    if (receivedSize == sizeof(PacketGameStart)) {
+        printf("Received start game");
+        PacketGameStart gameStartPacket;
+        std::memcpy(&gameStartPacket, buffer, sizeof(PacketGameState));
+
+        for (int i = 0; i < gameStartPacket.active_players_count; i++) {
+            int remoteId = gameStartPacket.players[i].player_id;
+
+            if (remoteId == getPlayerId()) {
+                // @Todo : Clear this mess
+                removeBoat(remoteId);
+                addPlayer(remoteId, sf::Vector2f(gameStartPacket.players[i].x, gameStartPacket.players[i].y));
+            } else {
+                addBoat(remoteId, sf::Vector2f(gameStartPacket.players[i].x, gameStartPacket.players[i].y));
+            }
+        }
+    }
 }
 
 int GameManager::disconnectFromServer() {
@@ -100,8 +124,6 @@ int GameManager::getPlayerId() const {
     return playerId;
 }
 
-// @todo: Function should be called by server on server side
-// @todo: Client should never call this function in production after connecting to server
 void GameManager::handleCollisions() {
     for (auto it1 = activeBoats.begin(); it1 != activeBoats.end(); ++it1) {
 

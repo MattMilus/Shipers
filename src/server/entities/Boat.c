@@ -11,13 +11,13 @@ void boat_init(Boat* boat, Vector2f start_pos) {
     boat->position = start_pos;
     boat->velocity = (Vector2f){0.0f, 0.0f};
     boat->current_angle = 0.0f;
-    boat->angle_command = 0.0f;
+    boat->rotation = 0.0f;
     boat->throttle = 0.0f;
 
-    boat->acceleration = 100.0f;
-    boat->turn_speed = 90.0f;
-    boat->drag_forward = 0.98f;
-    boat->drag_lateral = 0.80f;
+    boat->acceleration = 300.0f;
+    boat->turn_speed = 120.0f;
+    boat->drag_forward = 0.995f;
+    boat->drag_lateral = 0.98f;
 }
 
 void boat_set_throttle(Boat* boat, float new_throttle) {
@@ -25,18 +25,8 @@ void boat_set_throttle(Boat* boat, float new_throttle) {
 }
 
 void boat_update_physics(Boat* boat, float deltaTime) {
-    if (fabsf(boat->angle_command) > 0.1f) {
-        float rotationStep = boat->turn_speed * deltaTime;
-        if (fabsf(boat->angle_command) > rotationStep) {
-            if (boat->angle_command > 0.f) {
-                boat->current_angle += rotationStep;
-                boat->angle_command -= rotationStep;
-            } else {
-                boat->current_angle -= rotationStep;
-                boat->angle_command += rotationStep;
-            }
-        }
-    }
+    float rotationStep = boat->turn_speed * deltaTime * boat->rotation;
+    boat->current_angle += rotationStep;
 
     while (boat->current_angle >= 360.f) boat->current_angle -= 360.f;
     while (boat->current_angle < 0.f) boat->current_angle += 360.f;

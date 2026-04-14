@@ -6,6 +6,10 @@
 
 #include "GameManager.h"
 
+#include <stdio.h>
+
+#include "../packets_handlers/StateManager.h"
+
 void game_manager_init(GameState* state, int listenfd_socket) {
     pthread_mutex_init(&state->lock, NULL);
 
@@ -16,6 +20,10 @@ void game_manager_init(GameState* state, int listenfd_socket) {
         state->players[i].isActive = false;
         state->players[i].playerId = i + 1;
     }
+
+    state->players[3].isActive = true;
+    boat_init(&state->players[3].boat, (Vector2f){100.0f, 100.0f});
+    state->players[3].lastActivityTime = time(NULL) + 20;
 }
 
 int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr) {
@@ -122,4 +130,6 @@ void game_manager_resolve_collisions(GameState* state) {
             }
         }
     }
+
+    printf("B%d: vel x: %f, vel y: %f\n", 0, state->players[0].boat.velocity.x, state->players[0].boat.velocity.y);
 }

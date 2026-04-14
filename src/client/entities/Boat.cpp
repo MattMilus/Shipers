@@ -11,7 +11,7 @@ constexpr float PI = 3.14159265f;
 
 Boat::Boat(sf::Vector2f startPos)
     : position(startPos), targetPosition(startPos), velocity(0.f, 0.f), currentAngle(0.f), targetAngle(0.f),
-    angleCommand(0.f), throttle(0.f)
+    rotation(0.f), throttle(0.f)
 {
     acceleration = 300.f;
     turnSpeed = 120.f;
@@ -21,17 +21,8 @@ Boat::Boat(sf::Vector2f startPos)
 }
 
 void Boat::handleRotation(float deltaTime) {
-    if (std::abs(angleCommand) > 0.1f) {
-        float rotationStep = turnSpeed * deltaTime;
-        if (std::abs(angleCommand) > rotationStep) {
-            if (angleCommand > 0.f) {
-                currentAngle += rotationStep;
-                angleCommand -= rotationStep;
-            } else {
-                currentAngle -= rotationStep;
-                angleCommand += rotationStep;
-            }
-        }
+    if (std::abs(rotation) > 0.01f) {
+        currentAngle += rotation * turnSpeed * deltaTime;
     }
 
     while (currentAngle >= 360.f) currentAngle -= 360.f;
@@ -84,9 +75,8 @@ void Boat::setThrottle(float newThrottle) {
     throttle = std::clamp(newThrottle, -0.5f, 1.0f);
 }
 
-void Boat::addToAngleCommand(float angleInDegrees) {
-    angleCommand += angleInDegrees;
-    angleCommand = std::clamp(angleCommand, -90.f, 90.f);
+void Boat::setRotation(float newRotation) {
+    rotation = newRotation;
 }
 
 void Boat::addExternalForce(sf::Vector2f force) {
@@ -118,7 +108,7 @@ void Boat::setTargetAngle(float newAngle) {
 }
 
 float Boat::getCurrentAngle() const { return currentAngle; }
-float Boat::getAngleCommand() const { return angleCommand; }
+float Boat::getRotation() const { return rotation; }
 sf::Vector2f Boat::getVelocity() const { return velocity; }
 
 float Boat::getSpeed() const {

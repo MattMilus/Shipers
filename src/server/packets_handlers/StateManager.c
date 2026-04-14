@@ -16,10 +16,7 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameSta
 
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (gameState->players[i].isActive && gameState->players[i].playerId == move_data->player_id) {
-            gameState->players[i].boat.position.x = move_data->x;
-            gameState->players[i].boat.position.y = move_data->y;
-            gameState->players[i].boat.current_angle = move_data->currentAngle;
-            gameState->players[i].boat.angle_command = move_data->angleCommand;
+            gameState->players[i].boat.rotation = move_data->rotation;
             gameState->players[i].boat.throttle = move_data->throttle;
 
             gameState->players[i].lastActivityTime = time(NULL);
@@ -46,7 +43,7 @@ void broadcast_state(GameState* state) {
             snapshot.x = state->players[i].boat.position.x;
             snapshot.y = state->players[i].boat.position.y;
             snapshot.currentAngle = state->players[i].boat.current_angle;
-            snapshot.angleCommand = state->players[i].boat.angle_command;
+            snapshot.rotation = state->players[i].boat.rotation;
             snapshot.throttle = state->players[i].boat.throttle;
 
             packet.players[packet.active_players_count] = snapshot;
@@ -62,4 +59,5 @@ void broadcast_state(GameState* state) {
             }
         }
     }
+    printf("Boat 0: pos x: %f, pos y: %f\n", state->players[0].boat.position.x, state->players[0].boat.position.y);
 }

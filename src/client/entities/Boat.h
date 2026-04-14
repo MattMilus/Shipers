@@ -25,7 +25,7 @@ protected:
 
     float currentAngle;
     float targetAngle;
-    float angleCommand;
+    float rotation;
 
     float throttle;
 
@@ -43,7 +43,7 @@ public:
     void updateRemote(float deltaTime);
 
     void setThrottle(float newThrottle);
-    void addToAngleCommand(float angleInDegrees);
+    void setRotation(float rotation);
     void addExternalForce(sf::Vector2f force);
 
     bool isInCollider(sf::Vector2f position);
@@ -54,7 +54,7 @@ public:
     void setCurrentAngle(float newRotation );
     void setTargetAngle(float newAngle);
     float getCurrentAngle() const;
-    float getAngleCommand() const;
+    float getRotation() const;
     sf::Vector2f getVelocity() const;
     float getSpeed() const;
     float getThrottle() const;

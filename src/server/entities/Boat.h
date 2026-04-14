@@ -24,7 +24,7 @@ typedef struct {
     Vector2f velocity;
 
     float current_angle;
-    float angle_command;
+    float rotation;
 
     float throttle;
     float acceleration;

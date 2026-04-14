@@ -50,6 +50,10 @@ else()
             src/client/main.cpp
             src/client/managers/Renderer.cpp
             src/client/managers/Renderer.h
+            src/client/managers/Panel.cpp
+            src/client/managers/Panel.h
+            src/client/managers/Terminal.cpp
+            src/client/managers/Terminal.h
             src/client/managers/GameManager.cpp
             src/client/managers/GameManager.h
             src/client/entities/Player.cpp
@@ -63,7 +67,7 @@ else()
             src/client/managers/web_managers/StateManager.h
             src/client/managers/web_managers/PacketHandler.cpp
             src/client/managers/web_managers/PacketHandler.h
-    )
+     "src/client/managers/Terminal.h" "src/client/managers/Terminal.cpp")
 
     target_link_libraries(ShipersClient PRIVATE
             SFML::Graphics
@@ -71,4 +75,13 @@ else()
             SFML::System
             SFML::Network
     )
-endif()
+
+    add_custom_command(TARGET ShipersClient POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E remove_directory
+        "$<TARGET_FILE_DIR:ShipersClient>/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/src/client/assets"
+        "$<TARGET_FILE_DIR:ShipersClient>/assets"
+        COMMENT "Kopiowanie assets..."
+    )
+endif() 

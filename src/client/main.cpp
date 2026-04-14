@@ -11,6 +11,7 @@
 #include "managers/web_managers/StateManager.h"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/UdpSocket.hpp"
+#include "managers/Terminal.h"
 
 using namespace sf;
 
@@ -23,6 +24,8 @@ Vector2f normalize(const Vector2f& source) {
 }
 
 int main() {
+    printf("\033[2J\033[1;1H"); // 'Clear' console
+
     GameManager *gameManager = new GameManager();
     Renderer *renderer = new Renderer(gameManager);
     RenderWindow& window = *renderer->initialize();
@@ -32,10 +35,40 @@ int main() {
         return -1;
     }
 
+	auto regCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
+	auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
+	auto textCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Text);
+
+
     Clock globalClock;
     Clock deltaClock;
     Clock networkClock;
     const float NETWORK_TICK_RATE = 1.0f / 30.0f;
+        
+    std::string text;
+	bool isWriting = false;
+    size_t panelId = renderer->addPanel();
+    Panel& debugPanel = renderer->getPanel(panelId);
+
+    debugPanel.setPosition({ 10.f, 10.f });
+    debugPanel.setSize({ 220.f, 100.f });
+
+    debugPanel.setStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
+    debugPanel.setText("Click me to write");
+
+    debugPanel.setHeldStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
+    debugPanel.setHeldText("Write text here...");
+
+    debugPanel.setButton([&text, &isWriting, &debugPanel]() {
+        if (!debugPanel.changeStyle) debugPanel.switchStyle();
+
+        text = debugPanel.getText();
+        isWriting = !isWriting;
+        });
+    debugPanel.setHover([&debugPanel, &window, &textCursor]() {
+        window.setMouseCursor(*textCursor);
+        });
+
 
     while (window.isOpen()) {
         float time = globalClock.getElapsedTime().asSeconds();
@@ -44,6 +77,33 @@ int main() {
         while (const auto event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>())
                 window.close();
+
+            sf::Vector2f mousePos = { (float)sf::Mouse::getPosition(window).x,  (float)sf::Mouse::getPosition(window).y };
+            size_t panelId = renderer->getPanelIdAt(mousePos);
+
+            if (panelId != -1) {
+				Panel& panel = renderer->getPanel(panelId);
+                panel.onHover();
+
+                if (event->is<sf::Event::MouseButtonPressed>()) {
+                    panel.onClick();
+                }
+                else if (event->is<sf::Event::MouseButtonReleased>()) {
+                    renderer->releaseAllButtons();
+                }
+            }  else {
+                window.setMouseCursor(*regCursor);
+            }
+            const auto* textEvent = event->getIf<sf::Event::TextEntered>();
+            if (isWriting && textEvent) {
+                char ch = static_cast<char>(textEvent->unicode);
+                if (ch == '\b') {
+                    if (!text.empty()) text.pop_back();
+                } else {
+                    text += ch;
+                }
+                renderer->getPanel(panelId).setText(text.c_str());
+            }
         }
 
         if (Player* localPlayer = gameManager->getPlayer()) {
@@ -75,6 +135,7 @@ int main() {
         renderer->render(time);
     }
 
+    printf("\033[2J\033[1;1H"); // 'Clear' console
     gameManager->disconnectFromServer();
 
     return 0;

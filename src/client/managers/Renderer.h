@@ -14,10 +14,12 @@
 
 #include "GameManager.h"
 #include "../env.h"
+#include "Panel.h"
 
 #define BOAT_U_PATH_HISTORY_SIZE 256
 #define MAX_BOATS 4
 #define TOTAL_HISTORY_SIZE (BOAT_U_PATH_HISTORY_SIZE * MAX_BOATS)
+
 
 
 class Renderer {
@@ -25,6 +27,9 @@ private:
     GameManager* gameManager;
 
     sf::RenderWindow window;
+    sf::Glsl::Vec2 resolution;
+
+
     sf::Glsl::Vec2 uPathHistory[TOTAL_HISTORY_SIZE];
     sf::Shader checkerShader;
     sf::Shader waveShader;
@@ -33,6 +38,7 @@ private:
     sf::RenderTexture renderTex;
     sf::RectangleShape screenQuad;
 
+    std::vector<Panel> panels;
 
     void loadShaders();
     void loadTextures();
@@ -46,6 +52,10 @@ public:
     sf::RenderWindow* initialize();
 
     void render(float time);
+    size_t addPanel() { panels.emplace_back(); return panels.size() - 1; }
+    Panel& getPanel(size_t index) { return panels.at(index); }
+    size_t getPanelIdAt(const sf::Vector2f& pos);
+    void releaseAllButtons();
     void debug();
 };
 

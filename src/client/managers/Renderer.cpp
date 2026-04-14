@@ -48,16 +48,16 @@ Renderer::Renderer(GameManager* game_manager)
       resolution(800.f, 600.f) {
 }
 
-size_t Renderer::getButtonIdAt(const sf::Vector2f& pos) {
+size_t Renderer::getPanelIdAt(const sf::Vector2f& pos) {
     for (size_t i = 0; i < panels.size(); ++i) {
-        if (panels[i].isButton() && panels[i].contains(pos)) return i;
+        if (panels[i].contains(pos)) return i;
     }
     return -1;
 }
 
 void Renderer::releaseAllButtons() {
 	for (Panel& panel : panels) {
-		if (panel.isHeld()) panel.switchStyle();
+		if (panel.changeStyle) panel.switchStyle();
 	}
 }
 

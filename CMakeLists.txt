@@ -80,4 +80,4 @@ else()
         "$<TARGET_FILE_DIR:ShipersClient>/assets"
         COMMENT "Kopiowanie assets..."
     )
-endif()
+endif() 

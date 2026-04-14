@@ -37,6 +37,7 @@ int main() {
 
 	auto regCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
 	auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
+	auto textCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Text);
 
     Clock globalClock;
     Clock deltaClock;
@@ -50,33 +51,42 @@ int main() {
     debugPanel.setSize({ 220.f, 100.f });
 
     debugPanel.setStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
-	debugPanel.setText("I'm not held");
+	debugPanel.setText("Write text here...");
 
     debugPanel.setHeldStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
-    debugPanel.setHeldText("I'm held now");
+    debugPanel.setHeldText("Click me to write");
+    debugPanel.switchStyle();
 
-    debugPanel.makeButton([]() {
-        static int clickCnt = 0; 
-        printAt(0, 10, "button was clicked %d times", ++clickCnt); 
+    std::string text;
+	bool isWriting = false;
+    debugPanel.setButton([&text, &isWriting, &debugPanel]() {
+        debugPanel.switchStyle();
+
+        text = debugPanel.getText();
+        isWriting = !isWriting;
+    });
+    debugPanel.setHover([&debugPanel, &window, &textCursor]() {
+        if(!debugPanel.changeStyle) debugPanel.switchStyle();
+        window.setMouseCursor(*textCursor);
     });
 
     while (window.isOpen()) {
         float time = globalClock.getElapsedTime().asSeconds();
         float deltaTime = deltaClock.restart().asSeconds();
 
-        
-
         while (const auto event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>())
                 window.close();
 
             sf::Vector2f mousePos = { (float)sf::Mouse::getPosition(window).x,  (float)sf::Mouse::getPosition(window).y };
-            size_t buttonId = renderer->getButtonIdAt(mousePos);
+            size_t panelId = renderer->getPanelIdAt(mousePos);
 
-            if (buttonId != -1) {
-				window.setMouseCursor(*handCursor);
+            if (panelId != -1) {
+				Panel& panel = renderer->getPanel(panelId);
+                panel.onHover();
+
                 if (event->is<sf::Event::MouseButtonPressed>()) {
-                    renderer->getPanel(buttonId).click();
+                    panel.onClick();
                 }
                 else if (event->is<sf::Event::MouseButtonReleased>()) {
                     renderer->releaseAllButtons();
@@ -84,7 +94,16 @@ int main() {
             }  else {
                 window.setMouseCursor(*regCursor);
             }
-
+            const auto* textEvent = event->getIf<sf::Event::TextEntered>();
+            if (isWriting && textEvent) {
+                char ch = static_cast<char>(textEvent->unicode);
+                if (ch == '\b') {
+                    if (!text.empty()) text.pop_back();
+                } else {
+                    text += ch;
+                }
+                debugPanel.setText(text.c_str());
+            }
         }
 
         if (Player* localPlayer = gameManager->getPlayer()) {

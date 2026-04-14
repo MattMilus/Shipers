@@ -22,7 +22,6 @@
 #define MAX_BOATS 4
 #define TOTAL_HISTORY_SIZE (BOAT_U_PATH_HISTORY_SIZE * MAX_BOATS)
 
-
 class Panel {
 private:
     sf::Vector2f position;
@@ -31,16 +30,21 @@ private:
 
     sf::Text text;
 	sf::Text clickedText;
-    bool button = false;
-	bool held = false;
-    std::function<void()> onClick;
+
+    std::function<void()> clickFunc;
+    std::function<void()> hoverFunc;
 
 public:
     Panel();
 
+    bool changeStyle = false; //TODO: getter, setter, name change
+
+    
+
     void setFontSize(unsigned int size);
     void setText(const char* format, ...);
-	void setHeldText(const char* format, ...);
+    std::string getText() { return text.getString(); }
+    void setHeldText(const char* format, ...);
 
     void setPosition(const sf::Vector2f& pos) { 
         background.setPosition(pos); text.setPosition(pos); 
@@ -62,14 +66,19 @@ public:
         clickedBackground.setOutlineColor(bdColor);
 		clickedBackground.setOutlineThickness(thickness);
 	}
-	void switchStyle() { held = !held, std::swap(background, clickedBackground); std::swap(text, clickedText); }
+	void switchStyle() { 
+        changeStyle = !changeStyle;
+        std::swap(background, clickedBackground); std::swap(text, clickedText); 
+    }
 
-    void makeButton(std::function <void()> func) { button = true; onClick.swap(func); } // Who will ever unmake a button? :P
-	bool isButton() { return button; }
-	bool isHeld() { return held; }
+    void setButton(std::function <void()> func) { clickFunc.swap(func); } // Who will ever unmake a button? :P
+    void setHover(std::function <void()> func) { hoverFunc.swap(func); }
+
+	void onClick() { if (clickFunc) clickFunc(); }
+	void onHover() { if (hoverFunc) hoverFunc(); }
 
 	bool contains(const sf::Vector2f& point) const { return background.getGlobalBounds().contains(point); } 
-    void click() { if (button && onClick) onClick(); switchStyle(); }
+
 
     void draw(sf::RenderWindow& window);
 };
@@ -106,7 +115,7 @@ public:
     void render(float time);
     size_t addPanel() { panels.emplace_back(); return panels.size() - 1; }
     Panel& getPanel(size_t index) { return panels.at(index); }
-    size_t getButtonIdAt(const sf::Vector2f& pos);
+    size_t getPanelIdAt(const sf::Vector2f& pos);
     void releaseAllButtons();
     void debug();
 };

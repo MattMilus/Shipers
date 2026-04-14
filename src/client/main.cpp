@@ -50,23 +50,21 @@ int main() {
     debugPanel.setPosition({ 10.f, 10.f });
     debugPanel.setSize({ 220.f, 100.f });
 
-    debugPanel.setStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
-	debugPanel.setText("Write text here...");
+    debugPanel.setStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
+    debugPanel.setText("Click me to write");
 
-    debugPanel.setHeldStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
-    debugPanel.setHeldText("Click me to write");
-    debugPanel.switchStyle();
-
+    debugPanel.setHeldStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
+	debugPanel.setHeldText("Write text here...");
+    
     std::string text;
 	bool isWriting = false;
     debugPanel.setButton([&text, &isWriting, &debugPanel]() {
-        debugPanel.switchStyle();
+        if (!debugPanel.changeStyle) debugPanel.switchStyle();
 
         text = debugPanel.getText();
         isWriting = !isWriting;
     });
     debugPanel.setHover([&debugPanel, &window, &textCursor]() {
-        if(!debugPanel.changeStyle) debugPanel.switchStyle();
         window.setMouseCursor(*textCursor);
     });
 

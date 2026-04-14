@@ -5,9 +5,9 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <time.h>
 #include "Router.h"
 #include "managers/GameManager.h"
+#include "packets_handlers/ConnectionHandler.h"
 #include "packets_handlers/StateManager.h"
 
 struct client_data {

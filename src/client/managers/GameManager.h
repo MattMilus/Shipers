@@ -27,6 +27,7 @@ public:
     GameManager();
 
     int connectToServer();
+    int disconnectFromServer();
 
     void handleCollisions();
 
@@ -40,6 +41,7 @@ public:
     sf::IpAddress getServerIpAddress() const;
     int addBoat(int id, sf::Vector2f startPos);
     bool hasBoat(int id);
+    void removeBoat(int id);
     [[nodiscard]] const std::map<int, std::unique_ptr<Boat>>& getActiveBoats() const;
     [[nodiscard]] Boat* getBoatById(int id) const;
     [[nodiscard]] Player* getPlayer() const;

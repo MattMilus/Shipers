@@ -12,27 +12,40 @@
 enum MessageType : std::uint32_t {
     MSG_CONNECT = 1,
     MSG_ACCEPTED = 2,
+    MSG_DISCONNECT = 3,
+    MSG_PLAYER_DISCONNECTED = 4,
+    MSG_TIMEOUT = 5,
     MSG_GAME_STATE = 100,
     MSG_MOVE = 101
 };
 
-struct MsgHeader {
+typedef struct {
     MessageType type;
-};
+} MsgHeader;
 
-struct PacketConnect {
+typedef struct {
     MessageType type;
-};
+} PacketConnect;
 
-struct PacketAccepted {
+typedef struct {
     MessageType type;
     int player_id;
-};
+} PacketAccepted;
 
-struct PacketJoin {
+typedef struct {
     MessageType type;
     int player_id;
-};
+} PacketDisconnect;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketPlayerDisconnected;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketTimeout;
 
 typedef struct {
     uint32_t type;

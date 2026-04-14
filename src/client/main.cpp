@@ -118,7 +118,11 @@ int main() {
         }
 
         for (auto& [id, boat] : gameManager->getActiveBoats()) {
-            boat->update(deltaTime);
+            if (id == gameManager->getPlayerId()) {
+                boat->updateLocal(deltaTime);
+            } else {
+                boat->updateRemote(deltaTime);
+            }
         }
 
         if (networkClock.getElapsedTime().asSeconds() >= NETWORK_TICK_RATE) {
@@ -140,6 +144,7 @@ int main() {
     }
 
     printf("\033[2J\033[1;1H"); // 'Clear' console
+    gameManager->disconnectFromServer();
 
     return 0;
 }

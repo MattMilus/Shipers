@@ -25,6 +25,10 @@ int GameManager::connectToServer() {
     return playerId;
 }
 
+int GameManager::disconnectFromServer() {
+    return ConnectionManager::disconnectFromServer(this);
+}
+
 int GameManager::addPlayer(int id, sf::Vector2f startPos) {
     {
         if (activeBoats.size() >= 4) {
@@ -63,6 +67,10 @@ int GameManager::addBoat(int id, sf::Vector2f startPos) {
 
 bool GameManager::hasBoat(const int id) {
     return activeBoats.find(id) != activeBoats.end();
+}
+
+void GameManager::removeBoat(int id) {
+    activeBoats.erase(id);
 }
 
 const std::map<int, std::unique_ptr<Boat>>& GameManager::getActiveBoats() const {

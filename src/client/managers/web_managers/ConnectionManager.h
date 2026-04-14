@@ -10,6 +10,7 @@
 class ConnectionManager {
 public:
     static int connectToServer(GameManager* game_manager);
+    static int disconnectFromServer(GameManager* game_manager);
 };
 
 

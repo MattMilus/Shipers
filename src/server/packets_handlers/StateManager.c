@@ -9,8 +9,6 @@
 
 #include "../ServerPackets.h"
 
-#define TIMEOUT_SECONDS 5
-
 void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
     PacketMove *move_data = (PacketMove *)buffer;
 
@@ -30,30 +28,6 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameSta
     }
 
     pthread_mutex_unlock(&gameState->lock);
-}
-
-void* timeout_checker(void* arg) {
-    GameState* state = (GameState*)arg;
-
-    for (;;) {
-        sleep(2);
-        time_t now = time(NULL);
-
-        pthread_mutex_lock(&state->lock);
-
-        for (int i = 0; i < MAX_PLAYERS; i++) {
-            if (state->players[i].isActive) {
-                if (now - state->players[i].lastActivityTime > TIMEOUT_SECONDS) {
-                    fprintf(stderr, "[TIMEOUT] Player %d not responding. Releasing slot.\n", state->players[i].playerId);
-                    state->players[i].isActive = false;
-                    state->current_player_count--;
-                }
-            }
-        }
-
-        pthread_mutex_unlock(&state->lock);
-    }
-    return NULL;
 }
 
 void* state_broadcaster(void* arg) {

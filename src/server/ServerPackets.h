@@ -65,6 +65,8 @@ typedef struct {
     float currentAngle;
     float rotation;
     float throttle;
+    float velocityX;
+    float velocityY;
 } PlayerSnapshot;
 
 typedef struct {

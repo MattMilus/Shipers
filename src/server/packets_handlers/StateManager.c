@@ -45,6 +45,8 @@ void broadcast_state(GameState* state) {
             snapshot.currentAngle = state->players[i].boat.current_angle;
             snapshot.rotation = state->players[i].boat.rotation;
             snapshot.throttle = state->players[i].boat.throttle;
+            snapshot.velocityX = state->players[i].boat.velocity.x;
+            snapshot.velocityY = state->players[i].boat.velocity.y;
 
             packet.players[packet.active_players_count] = snapshot;
             packet.active_players_count++;

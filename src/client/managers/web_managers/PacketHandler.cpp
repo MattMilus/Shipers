@@ -42,6 +42,7 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
 
                     remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
                     remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
+                    remoteBoat->setTargetVelocity(sf::Vector2f(statePacket.players[i].velocityX, statePacket.players[i].velocityY));
                     remoteBoat->setRotation(statePacket.players[i].rotation);
                     remoteBoat->setThrottle(statePacket.players[i].throttle);
                 }

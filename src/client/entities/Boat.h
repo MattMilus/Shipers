@@ -22,6 +22,7 @@ protected:
     sf::Vector2f position;
     sf::Vector2f targetPosition;
     sf::Vector2f velocity;
+    sf::Vector2f targetVelocity;
 
     float currentAngle;
     float targetAngle;
@@ -50,16 +51,15 @@ public:
 
     void setPosition(sf::Vector2f newPosition);
     void setTargetPosition(sf::Vector2f newPosition);
-    sf::Vector2f getPosition() const;
+    [[nodiscard]] sf::Vector2f getPosition() const;
     void setCurrentAngle(float newRotation );
     void setTargetAngle(float newAngle);
-    float getCurrentAngle() const;
-    float getRotation() const;
-    sf::Vector2f getVelocity() const;
-    float getSpeed() const;
-    float getThrottle() const;
-
-    void debug(sf::RenderTarget& target);
+    [[nodiscard]] float getCurrentAngle() const;
+    [[nodiscard]] float getRotation() const;
+    [[nodiscard]] sf::Vector2f getVelocity() const;
+    void setTargetVelocity(sf::Vector2f newVelocity);
+    [[nodiscard]] float getSpeed() const;
+    [[nodiscard]] float getThrottle() const;
 };
 
 

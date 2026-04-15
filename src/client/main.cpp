@@ -58,19 +58,6 @@ int main() {
     debugPanel.setStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
     debugPanel.setText("Click me to write");
 
-    debugPanel.setHeldStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
-    debugPanel.setHeldText("Write text here...");
-
-    debugPanel.setButton([&text, &isWriting, &debugPanel]() {
-        if (!debugPanel.changeStyle) debugPanel.switchStyle();
-
-        text = debugPanel.getText();
-        isWriting = !isWriting;
-        });
-    debugPanel.setHover([&debugPanel, &window, &textCursor]() {
-        window.setMouseCursor(*textCursor);
-        });
-
 
     while (window.isOpen()) {
         float time = globalClock.getElapsedTime().asSeconds();
@@ -122,11 +109,11 @@ int main() {
         }
 
         for (auto& [id, boat] : gameManager->getActiveBoats()) {
-            //if (id == gameManager->getPlayerId()) {
-            //    boat->updateLocal(deltaTime);
-            //} else {
+            if (id == gameManager->getPlayerId()) {
+                boat->updateLocal(deltaTime);
+            } else {
                 boat->updateRemote(deltaTime);
-            //}
+            }
         }
 
         gameManager->handleCollisions();

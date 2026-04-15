@@ -48,6 +48,7 @@ void Boat::move(float deltaTime) {
 }
 
 void Boat::updateLocal(float deltaTime) {
+    this->updateRemote(deltaTime);
     this->handleRotation(deltaTime);
     this->move(deltaTime);
 }
@@ -60,6 +61,9 @@ void Boat::updateRemote(float deltaTime) {
 
     position.x += (targetPosition.x - position.x) * lerpFactor;
     position.y += (targetPosition.y - position.y) * lerpFactor;
+
+    velocity.x += (targetVelocity.x - velocity.x) * lerpFactor;
+    velocity.y += (targetVelocity.y - velocity.y) * lerpFactor;
 
     float angleDiff = targetAngle - currentAngle;
     while (angleDiff > 180.f) angleDiff -= 360.f;
@@ -110,6 +114,10 @@ void Boat::setTargetAngle(float newAngle) {
 float Boat::getCurrentAngle() const { return currentAngle; }
 float Boat::getRotation() const { return rotation; }
 sf::Vector2f Boat::getVelocity() const { return velocity; }
+
+void Boat::setTargetVelocity(sf::Vector2f newVelocity) {
+    this->targetVelocity = newVelocity;
+}
 
 float Boat::getSpeed() const {
     return std::sqrt((velocity.x * velocity.x) + (velocity.y * velocity.y));

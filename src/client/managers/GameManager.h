@@ -4,33 +4,57 @@
 
 #ifndef GAMEMANAGER_H
 #define GAMEMANAGER_H
+#include <chrono>
+#include <cstdint>
 #include <map>
 #include <memory>
+#include <set>
+#include <string>
 
 #include "../entities/Boat.h"
 #include "../entities/Player.h"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/UdpSocket.hpp"
 
+enum class SessionPhase {
+    Lobby,
+    Countdown,
+    Race
+};
 
 class GameManager {
 private:
     std::map<int, std::unique_ptr<Boat>> activeBoats;
+    std::set<int> readyPlayers;
     int playerId;
+    std::string nickname;
+    SessionPhase sessionPhase;
+    std::chrono::steady_clock::time_point scheduledStartAt;
 
     sf::UdpSocket* updSocket;
     sf::IpAddress serverIpAddress;
 
     int addPlayer(int id, sf::Vector2f startPos);
+    static sf::Vector2f lobbySpawnForId(int id);
+    static sf::Vector2f raceSpawnForId(int id);
 public:
     GameManager();
 
     int connectToServer();
     int disconnectFromServer();
+    void updateSessionState();
+    void enterLobby();
+    void scheduleRaceStart(std::uint32_t countdownMs);
+    bool shouldSendMoves() const;
+    bool isReady() const;
+    void markPlayerReady(int id);
+    void clearPlayerReady(int id);
+    void setNickname(std::string newNickname);
+    const std::string& getNickname() const;
+    SessionPhase getSessionPhase() const;
+    float getCountdownSecondsLeft() const;
 
     void handleCollisions();
-
-    // Returns the player ID (index) of the newly added player, or -1 if max players reached
 
     void setUdpSocket(sf::UdpSocket* socket);
     sf::UdpSocket* getUdpSocket() const;

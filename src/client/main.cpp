@@ -1,141 +1,143 @@
-﻿#include <SFML/Graphics.hpp>
-#include <iostream>
+#include <SFML/Graphics.hpp>
 #include <cmath>
-#include <cstring>
-#include <map>
+#include <iostream>
+#include <optional>
 
+#include "entities/Player.h"
 #include "managers/GameManager.h"
 #include "managers/Renderer.h"
-#include "entities/Player.h"
 #include "managers/web_managers/PacketHandler.h"
 #include "managers/web_managers/StateManager.h"
-#include "SFML/Network/IpAddress.hpp"
-#include "SFML/Network/UdpSocket.hpp"
-#include "managers/Terminal.h"
-
-using namespace sf;
-
-Vector2f normalize(const Vector2f& source) {
-    float length = sqrt((source.x * source.x) + (source.y * source.y));
-    if (length != 0)
-        return Vector2f(source.x / length, source.y / length);
-
-    return source;
-}
 
 int main() {
-    printf("\033[2J\033[1;1H"); // 'Clear' console
+    printf("\033[2J\033[1;1H");
 
-    GameManager *gameManager = new GameManager();
-    Renderer *renderer = new Renderer(gameManager);
-    RenderWindow& window = *renderer->initialize();
+    auto* gameManager = new GameManager();
+    auto* renderer = new Renderer(gameManager);
+    sf::RenderWindow& window = *renderer->initialize();
 
     if (gameManager->connectToServer() == -1) {
         std::cerr << "Error connecting to server." << std::endl;
         return -1;
     }
 
-	auto regCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
-	auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
-	auto textCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Text);
+    auto regCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
+    auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
 
+    sf::Clock globalClock;
+    sf::Clock deltaClock;
+    sf::Clock networkClock;
+    const float networkTickRate = 1.0f / 30.0f;
 
-    Clock globalClock;
-    Clock deltaClock;
-    Clock networkClock;
-    const float NETWORK_TICK_RATE = 1.0f / 30.0f;
-        
-    std::string text;
-	bool isWriting = false;
-    size_t panelId = renderer->addPanel();
-    Panel& debugPanel = renderer->getPanel(panelId);
+    size_t statusPanelId = renderer->addPanel();
+    Panel& statusPanel = renderer->getPanel(statusPanelId);
+    statusPanel.setPosition({10.f, 10.f});
+    statusPanel.setSize({320.f, 90.f});
+    statusPanel.setStyle(sf::Color::White, 20, sf::Color(20, 20, 20, 190), sf::Color::White, 2.0f);
+    statusPanel.setText("Lobby");
 
-    debugPanel.setPosition({ 10.f, 10.f });
-    debugPanel.setSize({ 220.f, 100.f });
-
-    debugPanel.setStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
-    debugPanel.setText("Click me to write");
-
-    debugPanel.setHeldStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
-    debugPanel.setHeldText("Write text here...");
-
-    debugPanel.setButton([&text, &isWriting, &debugPanel]() {
-        if (!debugPanel.changeStyle) debugPanel.switchStyle();
-
-        text = debugPanel.getText();
-        isWriting = !isWriting;
-        });
-    debugPanel.setHover([&debugPanel, &window, &textCursor]() {
-        window.setMouseCursor(*textCursor);
-        });
-
+    size_t readyPanelId = renderer->addPanel();
+    Panel& readyPanel = renderer->getPanel(readyPanelId);
+    readyPanel.setPosition({10.f, 120.f});
+    readyPanel.setSize({220.f, 50.f});
+    readyPanel.setStyle(sf::Color::Blue, 20, sf::Color::White, sf::Color::Blue, 2.0f);
+    readyPanel.setHeldStyle(sf::Color::White, 20, sf::Color::Blue, sf::Color::White, 2.0f);
+    readyPanel.setText("READY");
+    readyPanel.setHeldText("READY");
+    readyPanel.setButton([gameManager]() {
+        if (gameManager->getSessionPhase() == SessionPhase::Lobby && !gameManager->isReady()) {
+            StateManager::sendReady(gameManager);
+        }
+    });
+    readyPanel.setHover([&window, &handCursor]() {
+        window.setMouseCursor(*handCursor);
+    });
 
     while (window.isOpen()) {
-        float time = globalClock.getElapsedTime().asSeconds();
-        float deltaTime = deltaClock.restart().asSeconds();
+        const float time = globalClock.getElapsedTime().asSeconds();
+        const float deltaTime = deltaClock.restart().asSeconds();
 
         while (const auto event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>())
+            if (event->is<sf::Event::Closed>()) {
                 window.close();
+            }
 
-            sf::Vector2f mousePos = { (float)sf::Mouse::getPosition(window).x,  (float)sf::Mouse::getPosition(window).y };
-            size_t panelId = renderer->getPanelIdAt(mousePos);
+            const sf::Vector2f mousePos = {
+                static_cast<float>(sf::Mouse::getPosition(window).x),
+                static_cast<float>(sf::Mouse::getPosition(window).y)
+            };
+            const size_t pId = renderer->getPanelIdAt(mousePos);
 
-            if (panelId != -1) {
-				Panel& panel = renderer->getPanel(panelId);
+            if (pId != static_cast<size_t>(-1)) {
+                Panel& panel = renderer->getPanel(pId);
                 panel.onHover();
-
                 if (event->is<sf::Event::MouseButtonPressed>()) {
                     panel.onClick();
-                }
-                else if (event->is<sf::Event::MouseButtonReleased>()) {
+                } else if (event->is<sf::Event::MouseButtonReleased>()) {
                     renderer->releaseAllButtons();
                 }
-            }  else {
+            } else {
                 window.setMouseCursor(*regCursor);
             }
-            const auto* textEvent = event->getIf<sf::Event::TextEntered>();
-            if (isWriting && textEvent) {
-                char ch = static_cast<char>(textEvent->unicode);
-                if (ch == '\b') {
-                    if (!text.empty()) text.pop_back();
-                } else {
-                    text += ch;
-                }
-                renderer->getPanel(panelId).setText(text.c_str());
-            }
-        }
-
-        if (Player* localPlayer = gameManager->getPlayer()) {
-            localPlayer->handleInput(deltaTime);
         }
 
         char buffer[2048];
         std::size_t received;
-        std::optional<IpAddress> senderIp;
+        std::optional<sf::IpAddress> senderIp;
         unsigned short senderPort;
 
-        while (gameManager->getUdpSocket()->receive(buffer, sizeof(buffer), received, senderIp, senderPort) == sf::Socket::Status::Done) {
+        while (gameManager->getUdpSocket()->receive(buffer, sizeof(buffer), received, senderIp, senderPort) ==
+               sf::Socket::Status::Done) {
             PacketHandler::handleIncomingPacket(buffer, received, gameManager);
+        }
+
+        gameManager->updateSessionState();
+
+        if (gameManager->getSessionPhase() == SessionPhase::Race) {
+            if (Player* localPlayer = gameManager->getPlayer()) {
+                localPlayer->handleInput(deltaTime);
+            }
         }
 
         for (auto& [id, boat] : gameManager->getActiveBoats()) {
             if (id == gameManager->getPlayerId()) {
-                boat->updateLocal(deltaTime);
+                if (gameManager->getSessionPhase() == SessionPhase::Race) {
+                    boat->updateLocal(deltaTime);
+                }
             } else {
                 boat->updateRemote(deltaTime);
             }
         }
 
-        if (networkClock.getElapsedTime().asSeconds() >= NETWORK_TICK_RATE) {
+        if (networkClock.getElapsedTime().asSeconds() >= networkTickRate && gameManager->shouldSendMoves()) {
             StateManager::sendMoveInformation(gameManager);
             networkClock.restart();
+        }
+
+        switch (gameManager->getSessionPhase()) {
+            case SessionPhase::Lobby:
+                if (gameManager->isReady()) {
+                    statusPanel.setText("Lobby\nReady - waiting for others");
+                    readyPanel.setText("WAITING...");
+                } else {
+                    statusPanel.setText("Lobby\nClick READY to join race");
+                    readyPanel.setText("READY");
+                }
+                break;
+            case SessionPhase::Countdown:
+                statusPanel.setText("Race starts in %.1fs", gameManager->getCountdownSecondsLeft());
+                readyPanel.setText("STARTING...");
+                break;
+            case SessionPhase::Race:
+                statusPanel.setText("Race in progress");
+                readyPanel.setText("IN RACE");
+                break;
         }
 
         renderer->render(time);
     }
 
-    printf("\033[2J\033[1;1H"); // 'Clear' console
+    printf("\033[2J\033[1;1H");
     gameManager->disconnectFromServer();
 
     return 0;

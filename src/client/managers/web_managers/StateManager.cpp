@@ -8,6 +8,23 @@
 
 #include "ServerPackets.h"
 
+void StateManager::sendReady(GameManager *gameManager) {
+    PacketPlayerReady readyPacket;
+    readyPacket.type = MSG_PLAYER_READY;
+    readyPacket.player_id = gameManager->getPlayerId();
+
+    const sf::Socket::Status status = gameManager->getUdpSocket()->send(
+        &readyPacket,
+        sizeof(readyPacket),
+        gameManager->getServerIpAddress(),
+        ENV_SERVER_PORT
+    );
+
+    if (status != sf::Socket::Status::Done) {
+        std::cerr << "Error while sending ready packet.\n";
+    }
+}
+
 void StateManager::sendMoveInformation(GameManager *gameManager) {
     if (Player* localPlayer = gameManager->getPlayer()) {
         Boat* myBoat = localPlayer;

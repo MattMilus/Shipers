@@ -20,9 +20,12 @@
 
 int ConnectionManager::connectToServer(GameManager* game_manager) {
     std::string ipString;
+    std::string nickname;
     std::cout << "--- SHIPERS CLIENT ---\n";
     std::cout << "Enter server IP (eg. 127.0.0.1 for local game): ";
     std::cin >> ipString;
+    std::cout << "Enter nickname: ";
+    std::cin >> nickname;
 
     std::optional<sf::IpAddress> serverIp = sf::IpAddress::resolve(ipString);
     if (!serverIp) {
@@ -30,13 +33,17 @@ int ConnectionManager::connectToServer(GameManager* game_manager) {
         return -1;
     }
     game_manager->setServerIpAddress(serverIp.value());
+    game_manager->setNickname(nickname);
 
     auto* dynamicSocket = new sf::UdpSocket();
     game_manager->setUdpSocket(dynamicSocket);
 
     sf::UdpSocket& socket = *dynamicSocket;
 
-    PacketConnect connectPacket {MSG_CONNECT};
+    PacketConnect connectPacket {};
+    connectPacket.type = MSG_CONNECT;
+    std::strncpy(connectPacket.nickname, nickname.c_str(), sizeof(connectPacket.nickname) - 1);
+    connectPacket.nickname[sizeof(connectPacket.nickname) - 1] = '\0';
 
     if (socket.send(&connectPacket, sizeof(connectPacket), *serverIp, ENV_SERVER_PORT) != sf::Socket::Status::Done) {
         std::cerr << "Error while connecting to server!\n";

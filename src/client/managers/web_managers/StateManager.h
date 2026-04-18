@@ -9,6 +9,7 @@
 
 class StateManager {
 public:
+    static void sendReady(GameManager* gameManager);
     static void sendMoveInformation(GameManager* gameManager);
 };
 

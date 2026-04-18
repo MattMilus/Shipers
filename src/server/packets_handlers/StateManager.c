@@ -1,7 +1,3 @@
-//
-// Created by Wiktor on 14.03.2026.
-//
-
 #include "StateManager.h"
 
 #include <stdio.h>
@@ -9,7 +5,35 @@
 
 #include "../ServerPackets.h"
 
+void player_ready(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
+    (void)sock;
+    (void)client_addr;
+
+    PacketPlayerReady *readyPacket = (PacketPlayerReady *)buffer;
+
+    int should_schedule = game_manager_mark_ready(gameState, readyPacket->player_id);
+
+    PacketAckReady ackPacket;
+    ackPacket.type = MSG_ACK_READY;
+    ackPacket.player_id = readyPacket->player_id;
+    game_manager_broadcast(gameState, &ackPacket, sizeof(ackPacket));
+
+    if (should_schedule) {
+        PacketGameScheduledStart scheduledPacket;
+        scheduledPacket.type = MSG_GAME_SCHEDULED_START;
+        scheduledPacket.countdown_ms = GAME_START_COUNTDOWN_MS;
+        game_manager_broadcast(gameState, &scheduledPacket, sizeof(scheduledPacket));
+    }
+}
+
 void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
+    (void)sock;
+    (void)client_addr;
+
+    if (!game_manager_is_race_active(gameState)) {
+        return;
+    }
+
     PacketMove *move_data = (PacketMove *)buffer;
 
     pthread_mutex_lock(&gameState->lock);
@@ -32,12 +56,15 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameSta
 
 void* state_broadcaster(void* arg) {
     GameState* state = (GameState*)arg;
-
-    // 33333 microseconds = ~30 fps (30 Hz)
-    const int TICK_RATE_MICROSECONDS = 33333;
+    const int tick_rate_microseconds = 33333;
 
     for (;;) {
-        usleep(TICK_RATE_MICROSECONDS);
+        usleep(tick_rate_microseconds);
+        game_manager_has_countdown_expired(state);
+
+        if (!game_manager_is_race_active(state)) {
+            continue;
+        }
 
         PacketGameState packet;
         packet.type = MSG_GAME_STATE;
@@ -60,16 +87,15 @@ void* state_broadcaster(void* arg) {
             }
         }
 
-        if (packet.active_players_count > 0) {
-            for (int i = 0; i < MAX_PLAYERS; i++) {
-                if (state->players[i].isActive) {
-                    sendto(state->listenfd_socket, &packet, sizeof(PacketGameState), 0,
-                           (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
-                }
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+            if (state->players[i].isActive) {
+                sendto(state->listenfd_socket, &packet, sizeof(packet), 0,
+                       (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
             }
         }
 
         pthread_mutex_unlock(&state->lock);
     }
+
     return NULL;
 }

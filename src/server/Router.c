@@ -1,8 +1,3 @@
-//
-// Created by Wiktor on 14.03.2026.
-//
-
-// router.c
 #include <stdio.h>
 #include "Router.h"
 
@@ -27,6 +22,11 @@ void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *cl
         case MSG_MOVE: {
             //fprintf(stderr, "Move player\n");
             movePlayer(buffer, sock, client_addr, gameState);
+            break;
+        }
+        case MSG_PLAYER_READY: {
+            fprintf(stderr, "Received message PLAYER_READY\n");
+            player_ready(buffer, sock, client_addr, gameState);
             break;
         }
         case MSG_DISCONNECT: {

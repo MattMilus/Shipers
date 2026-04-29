@@ -371,4 +371,4 @@ serverOut/
 clientOut/
 _deps/
 CMakeCache.txt
-wslBuild/
+wslBuild/"nazwa_folderu/" 

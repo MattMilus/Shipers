@@ -3,6 +3,7 @@
 //
 
 #include "ConnectionHandler.h"
+#include "../ServerPackets.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -22,6 +23,39 @@ void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, 
 
         sendto(sock, &response, sizeof(PacketAccepted), 0,
                (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
+
+        printf("Sending accept to client\n");
+        // @Todo: After adding lobby ensure proper communication and remove it from this place
+        PacketGameStart startStatePacket;
+        startStatePacket.type = MSG_GAME_START;
+        startStatePacket.player_id = new_player_id;
+
+        startStatePacket.active_players_count = 0;
+
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+            if (gameState->players[i].isActive) {
+                PlayerSnapshot snapshot;
+                snapshot.player_id = gameState->players[i].playerId;
+                snapshot.x = gameState->players[i].boat.position.x;
+                snapshot.y = gameState->players[i].boat.position.y;
+                snapshot.currentAngle = gameState->players[i].boat.current_angle;
+                snapshot.rotation = gameState->players[i].boat.rotation;
+                snapshot.throttle = gameState->players[i].boat.throttle;
+
+                startStatePacket.players[startStatePacket.active_players_count] = snapshot;
+                startStatePacket.active_players_count++;
+            }
+        }
+
+        if (startStatePacket.active_players_count > 0) {
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                if (gameState->players[i].isActive) {
+                    sendto(gameState->listenfd_socket, &startStatePacket, sizeof(PacketGameStart), 0,
+                           (struct sockaddr*)&gameState->players[i].client_addr, sizeof(struct sockaddr_in));
+                }
+            }
+        }
+
     }
 }
 

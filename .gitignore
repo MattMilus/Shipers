@@ -372,3 +372,4 @@ clientOut/
 _deps/
 CMakeCache.txt
 wslBuild/
+build/

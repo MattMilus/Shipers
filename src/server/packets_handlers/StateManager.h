@@ -9,6 +9,6 @@
 
 void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState);
 
-void* state_broadcaster(void* arg);
+void broadcast_state(GameState* state);
 
 #endif //SHIPERS_STATEMANAGER_H

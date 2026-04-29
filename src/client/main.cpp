@@ -32,6 +32,8 @@ int main() {
 
     if (gameManager->connectToServer() == -1) {
         std::cerr << "Error connecting to server." << std::endl;
+        std::cerr << "\nProgram zakonczony. Nacisnij Enter, aby zamknac...";
+        std::cin.get();
         return -1;
     }
 
@@ -55,19 +57,6 @@ int main() {
 
     debugPanel.setStyle(sf::Color::White, 20, sf::Color::Red, sf::Color::White, 4.0f);
     debugPanel.setText("Click me to write");
-
-    debugPanel.setHeldStyle(sf::Color::Red, 14, sf::Color::White, sf::Color::Red, 2.0f);
-    debugPanel.setHeldText("Write text here...");
-
-    debugPanel.setButton([&text, &isWriting, &debugPanel]() {
-        if (!debugPanel.changeStyle) debugPanel.switchStyle();
-
-        text = debugPanel.getText();
-        isWriting = !isWriting;
-        });
-    debugPanel.setHover([&debugPanel, &window, &textCursor]() {
-        window.setMouseCursor(*textCursor);
-        });
 
 
     while (window.isOpen()) {
@@ -126,6 +115,8 @@ int main() {
                 boat->updateRemote(deltaTime);
             }
         }
+
+        gameManager->handleCollisions();
 
         if (networkClock.getElapsedTime().asSeconds() >= NETWORK_TICK_RATE) {
             StateManager::sendMoveInformation(gameManager);

@@ -28,6 +28,32 @@ void *connection_handler(void *arg) {
     pthread_exit(NULL);
 }
 
+void* game_loop(void* arg) {
+    GameState* state = (GameState*)arg;
+
+    const int TICK_RATE_MICROSECONDS = 33333;
+    float deltaTime = TICK_RATE_MICROSECONDS / 1000000.0f;
+
+    for (;;) {
+        usleep(TICK_RATE_MICROSECONDS);
+
+        pthread_mutex_lock(&state->lock);
+
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+            if (state->players[i].isActive) {
+                boat_update_physics(&state->players[i].boat, deltaTime);
+            }
+        }
+
+        game_manager_resolve_collisions(state);
+
+        broadcast_state(state);
+
+        pthread_mutex_unlock(&state->lock);
+    }
+    return NULL;
+}
+
 int main(int argc, char *argv[]) {
     int listenfd = 0;
     struct sockaddr_in serv_addr;
@@ -57,9 +83,9 @@ int main(int argc, char *argv[]) {
     pthread_create(&timeout_thread, NULL, timeout_checker, (void*)&global_game);
     pthread_detach(timeout_thread);
 
-    pthread_t state_broadcaster_thread;
-    pthread_create(&state_broadcaster_thread, NULL, state_broadcaster, (void*)&global_game);
-    pthread_detach(state_broadcaster_thread);
+    pthread_t game_loop_thread;
+    pthread_create(&game_loop_thread, NULL, game_loop, (void*)&global_game);
+    pthread_detach(game_loop_thread);
 
     for (;;) {
         struct client_data *data = malloc(sizeof(struct client_data));

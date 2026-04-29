@@ -15,8 +15,9 @@ typedef enum uint32_t {
     MSG_DISCONNECT = 3,
     MSG_PLAYER_DISCONNECTED = 4,
     MSG_TIMEOUT = 5,
-    MSG_GAME_STATE = 100,
-    MSG_MOVE = 101
+    MSG_GAME_START = 100,
+    MSG_GAME_STATE = 101,
+    MSG_MOVE = 102
 } MessageType;
 
 typedef struct {
@@ -53,7 +54,7 @@ typedef struct {
     float x;
     float y;
     float currentAngle;
-    float angleCommand;
+    float rotation;
     float throttle;
 } PacketMove;
 
@@ -62,9 +63,18 @@ typedef struct {
     float x;
     float y;
     float currentAngle;
-    float angleCommand;
+    float rotation;
     float throttle;
+    float velocityX;
+    float velocityY;
 } PlayerSnapshot;
+
+typedef struct {
+    uint32_t type;
+    int player_id;
+    int active_players_count;
+    PlayerSnapshot players[4];
+} PacketGameStart;
 
 typedef struct {
     uint32_t type;

@@ -5,7 +5,6 @@
 #ifndef SHIPERS_CONNECTHANDLER_H
 #define SHIPERS_CONNECTHANDLER_H
 
-#include "../ServerPackets.h"
 #include "../managers/GameManager.h"
 
 #define TIMEOUT_SECONDS 5

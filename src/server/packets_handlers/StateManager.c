@@ -16,10 +16,7 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameSta
 
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (gameState->players[i].isActive && gameState->players[i].playerId == move_data->player_id) {
-            gameState->players[i].boat.position.x = move_data->x;
-            gameState->players[i].boat.position.y = move_data->y;
-            gameState->players[i].boat.current_angle = move_data->currentAngle;
-            gameState->players[i].boat.angle_command = move_data->angleCommand;
+            gameState->players[i].boat.rotation = move_data->rotation;
             gameState->players[i].boat.throttle = move_data->throttle;
 
             gameState->players[i].lastActivityTime = time(NULL);
@@ -30,46 +27,39 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameSta
     pthread_mutex_unlock(&gameState->lock);
 }
 
-void* state_broadcaster(void* arg) {
-    GameState* state = (GameState*)arg;
+/**
+ * Make sure to lock gamestate->lock before calling this function
+ * @param state
+ */
+void broadcast_state(GameState* state) {
+    PacketGameState packet;
+    packet.type = MSG_GAME_STATE;
+    packet.active_players_count = 0;
 
-    // 33333 microseconds = ~30 fps (30 Hz)
-    const int TICK_RATE_MICROSECONDS = 33333;
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+        if (state->players[i].isActive) {
+            PlayerSnapshot snapshot;
+            snapshot.player_id = state->players[i].playerId;
+            snapshot.x = state->players[i].boat.position.x;
+            snapshot.y = state->players[i].boat.position.y;
+            snapshot.currentAngle = state->players[i].boat.current_angle;
+            snapshot.rotation = state->players[i].boat.rotation;
+            snapshot.throttle = state->players[i].boat.throttle;
+            snapshot.velocityX = state->players[i].boat.velocity.x;
+            snapshot.velocityY = state->players[i].boat.velocity.y;
 
-    for (;;) {
-        usleep(TICK_RATE_MICROSECONDS);
+            packet.players[packet.active_players_count] = snapshot;
+            packet.active_players_count++;
+        }
+    }
 
-        PacketGameState packet;
-        packet.type = MSG_GAME_STATE;
-        packet.active_players_count = 0;
-
-        pthread_mutex_lock(&state->lock);
-
+    if (packet.active_players_count > 0) {
         for (int i = 0; i < MAX_PLAYERS; i++) {
             if (state->players[i].isActive) {
-                PlayerSnapshot snapshot;
-                snapshot.player_id = state->players[i].playerId;
-                snapshot.x = state->players[i].boat.position.x;
-                snapshot.y = state->players[i].boat.position.y;
-                snapshot.currentAngle = state->players[i].boat.current_angle;
-                snapshot.angleCommand = state->players[i].boat.angle_command;
-                snapshot.throttle = state->players[i].boat.throttle;
-
-                packet.players[packet.active_players_count] = snapshot;
-                packet.active_players_count++;
+                sendto(state->listenfd_socket, &packet, sizeof(PacketGameState), 0,
+                       (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
             }
         }
-
-        if (packet.active_players_count > 0) {
-            for (int i = 0; i < MAX_PLAYERS; i++) {
-                if (state->players[i].isActive) {
-                    sendto(state->listenfd_socket, &packet, sizeof(PacketGameState), 0,
-                           (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
-                }
-            }
-        }
-
-        pthread_mutex_unlock(&state->lock);
     }
-    return NULL;
+    printf("Boat 0: pos x: %f, pos y: %f\n", state->players[0].boat.position.x, state->players[0].boat.position.y);
 }

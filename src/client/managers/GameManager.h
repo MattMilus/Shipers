@@ -26,6 +26,7 @@ public:
     GameManager();
 
     int connectToServer();
+    void startGame(char* buffer, std::size_t receivedSize);
     int disconnectFromServer();
 
     void handleCollisions();

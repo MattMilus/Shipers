@@ -8,7 +8,7 @@
 #include <iostream>
 #include "../Terminal.h"
 
-#include "ServerPackets.h"
+#include "../../ServerPackets.h"
 
 
 void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize, GameManager* gameManager) {
@@ -21,6 +21,9 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
 
     switch (header->type) {
 
+        case MSG_GAME_START: {
+            gameManager->startGame(buffer, receivedSize);
+        }
         case MSG_GAME_STATE: {
             printAt(0, 3, "Received MSG_GAME_STATE\n");
             if (receivedSize == sizeof(PacketGameState)) {
@@ -31,17 +34,17 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                     printAt(0, 4 + i, "player %d on pos %f, %f", i, statePacket.players[i].x, statePacket.players[i].y);
                     int remoteId = statePacket.players[i].player_id;
 
-                    if (remoteId != gameManager->getPlayerId()) {
-                        if (!gameManager->hasBoat(remoteId)) {
-                            gameManager->addBoat(remoteId, sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
-                        }
-
-                        Boat* remoteBoat = gameManager->getBoatById(remoteId);
-
-                        remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
-                        remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
-                        remoteBoat->setThrottle(statePacket.players[i].throttle);
+                    if (!gameManager->hasBoat(remoteId)) {
+                        gameManager->addBoat(remoteId, sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
                     }
+
+                    Boat* remoteBoat = gameManager->getBoatById(remoteId);
+
+                    remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
+                    remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
+                    remoteBoat->setTargetVelocity(sf::Vector2f(statePacket.players[i].velocityX, statePacket.players[i].velocityY));
+                    remoteBoat->setRotation(statePacket.players[i].rotation);
+                    remoteBoat->setThrottle(statePacket.players[i].throttle);
                 }
             }
             break;

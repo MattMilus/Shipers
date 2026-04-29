@@ -18,13 +18,12 @@ void Player::handleInput(float deltaTime) {
         setThrottle(0.0f);
     }
 
-    float steeringSpeed = 90.f;
-
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
-       addToAngleCommand(-steeringSpeed * deltaTime);
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
-        addToAngleCommand(steeringSpeed * deltaTime);
+       setRotation(-1.f);
+    } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
+        setRotation(1.f);
+    } else {
+        setRotation(0.0f);
     }
 }
 

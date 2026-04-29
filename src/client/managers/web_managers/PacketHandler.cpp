@@ -6,7 +6,22 @@
 #include "../Terminal.h"
 #include "ServerPackets.h"
 
-void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize, GameManager* gameManager) {
+namespace {
+void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobbyPacket) {
+    gameManager->clearLobbyPlayers();
+
+    for (int i = 0; i < lobbyPacket.active_players_count; ++i) {
+        const LobbyPlayerSnapshot& playerSnapshot = lobbyPacket.players[i];
+        gameManager->upsertLobbyPlayer(playerSnapshot.player_id, playerSnapshot.nickname);
+
+        if (playerSnapshot.is_ready != 0) {
+            gameManager->markPlayerReady(playerSnapshot.player_id);
+        }
+    }
+}
+}
+
+void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receivedSize, GameManager* gameManager) {
     if (receivedSize < sizeof(MsgHeader)) {
         std::cerr << "Rejecting packet, too short (" << receivedSize << " bytes).\n";
         return;
@@ -20,7 +35,7 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                 break;
             }
 
-            PacketGameState statePacket;
+            PacketGameState statePacket{};
             std::memcpy(&statePacket, buffer, sizeof(PacketGameState));
 
             for (int i = 0; i < statePacket.active_players_count; i++) {
@@ -47,11 +62,11 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                 break;
             }
 
-            PacketPlayerDisconnected disconnectPacket;
+            PacketPlayerDisconnected disconnectPacket{};
             std::memcpy(&disconnectPacket, buffer, sizeof(PacketPlayerDisconnected));
 
             if (disconnectPacket.player_id == gameManager->getPlayerId()) {
-                gameManager->enterLobby();
+                gameManager->resetConnection();
             } else {
                 gameManager->removeBoat(disconnectPacket.player_id);
             }
@@ -62,14 +77,24 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                 break;
             }
 
-            PacketTimeout timeoutPacket;
+            PacketTimeout timeoutPacket{};
             std::memcpy(&timeoutPacket, buffer, sizeof(PacketTimeout));
 
             if (timeoutPacket.player_id == gameManager->getPlayerId()) {
-                gameManager->enterLobby();
+                gameManager->resetConnection();
             } else {
                 gameManager->removeBoat(timeoutPacket.player_id);
             }
+            break;
+        }
+        case MSG_ACK_JOIN_LOBBY: {
+            if (receivedSize != sizeof(PacketAckJoinLobby)) {
+                break;
+            }
+
+            PacketAckJoinLobby lobbyPacket{};
+            std::memcpy(&lobbyPacket, buffer, sizeof(PacketAckJoinLobby));
+            loadLobbySnapshot(gameManager, lobbyPacket);
             break;
         }
         case MSG_NEW_PLAYER_JOIN: {
@@ -77,11 +102,12 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                 break;
             }
 
-            PacketNewPlayerJoin joinPacket;
+            PacketNewPlayerJoin joinPacket{};
             std::memcpy(&joinPacket, buffer, sizeof(PacketNewPlayerJoin));
 
+            gameManager->upsertLobbyPlayer(joinPacket.player_id, joinPacket.nickname);
             if (joinPacket.player_id != gameManager->getPlayerId() && !gameManager->hasBoat(joinPacket.player_id)) {
-                gameManager->addBoat(joinPacket.player_id, sf::Vector2f(100.0f, 100.0f));
+                gameManager->addBoat(joinPacket.player_id, sf::Vector2f(0.0f, 0.0f));
             }
             break;
         }
@@ -90,7 +116,7 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                 break;
             }
 
-            PacketAckReady readyPacket;
+            PacketAckReady readyPacket{};
             std::memcpy(&readyPacket, buffer, sizeof(PacketAckReady));
             gameManager->markPlayerReady(readyPacket.player_id);
             break;
@@ -100,7 +126,7 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
                 break;
             }
 
-            PacketGameScheduledStart scheduledPacket;
+            PacketGameScheduledStart scheduledPacket{};
             std::memcpy(&scheduledPacket, buffer, sizeof(PacketGameScheduledStart));
             gameManager->scheduleRaceStart(scheduledPacket.countdown_ms);
             break;

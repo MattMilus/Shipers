@@ -11,6 +11,8 @@
 #include <SFML/Graphics/Shader.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/Texture.hpp>
+#include <functional>
+#include <utility>
 
 #include "GameManager.h"
 #include "../env.h"
@@ -39,6 +41,7 @@ private:
     sf::RectangleShape screenQuad;
 
     std::vector<Panel> panels;
+    std::function<void(sf::RenderWindow&)> overlayDrawer;
 
     void loadShaders();
     void loadTextures();
@@ -52,6 +55,7 @@ public:
     sf::RenderWindow* initialize();
 
     void render(float time);
+    void setOverlayDrawer(std::function<void(sf::RenderWindow&)> drawer) { overlayDrawer = std::move(drawer); }
     size_t addPanel() { panels.emplace_back(); return panels.size() - 1; }
     Panel& getPanel(size_t index) { return panels.at(index); }
     size_t getPanelIdAt(const sf::Vector2f& pos);

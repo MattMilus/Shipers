@@ -1,5 +1,6 @@
 #include "GameManager.h"
 
+#include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
@@ -10,27 +11,31 @@ static uint64_t now_ms(void) {
     return ((uint64_t)ts.tv_sec * 1000ULL) + ((uint64_t)ts.tv_nsec / 1000000ULL);
 }
 
-static Vector2f lobby_spawn_for_slot(int slot) {
-    Vector2f spawn = {100.0f, 100.0f + (slot * 80.0f)};
+static Vector2f race_spawn_for_slot(const int slot) {
+    Vector2f spawn = {300.0f + ((float)slot * 90.0f), 450.0f};
     return spawn;
 }
 
-static Vector2f race_spawn_for_slot(int slot) {
-    Vector2f spawn = {300.0f + (slot * 90.0f), 450.0f};
-    return spawn;
+static void write_player_nickname(char* destination, const size_t destination_size, const char* nickname, const int player_id) {
+    if (nickname != NULL && nickname[0] != '\0') {
+        snprintf(destination, destination_size, "%s", nickname);
+        return;
+    }
+
+    snprintf(destination, destination_size, "Player%d", player_id);
 }
 
-static void reset_player_to_lobby(Player* player, int slot) {
-    Vector2f spawn = lobby_spawn_for_slot(slot);
-    boat_init(&player->boat, spawn);
+static void reset_player_to_lobby(Player* player) {
     player->isReady = 0;
+    player->boat.velocity = (Vector2f){0.0f, 0.0f};
+    player->boat.throttle = 0.0f;
 }
 
-static void move_player_to_race_start(Player* player, int slot) {
-    Vector2f spawn = race_spawn_for_slot(slot);
+static void move_player_to_race_start(Player* player, const int slot) {
+    const Vector2f spawn = race_spawn_for_slot(slot);
     boat_init(&player->boat, spawn);
-    player->boat.current_angle = 0.0f;
-    player->boat.angle_command = 0.0f;
+    player->boat.current_angle = RACE_START_ANGLE_DEGREES;
+    player->boat.angle_command = RACE_START_ANGLE_DEGREES;
 }
 
 static int all_active_players_ready_locked(GameState* state) {
@@ -61,7 +66,7 @@ static void schedule_game_start_locked(GameState* state) {
     }
 }
 
-void game_manager_init(GameState* state, int listenfd_socket) {
+void game_manager_init(GameState* state, const int listenfd_socket) {
     pthread_mutex_init(&state->lock, NULL);
 
     state->current_player_count = 0;
@@ -72,9 +77,9 @@ void game_manager_init(GameState* state, int listenfd_socket) {
     for (int i = 0; i < MAX_PLAYERS; i++) {
         state->players[i].isActive = 0;
         state->players[i].isReady = 0;
-        state->players[i].playerId = i + 1;
-        state->players[i].nickname[0] = '\0';
-        reset_player_to_lobby(&state->players[i], i);
+        state->players[i].playerId = i;
+        write_player_nickname(state->players[i].nickname, sizeof(state->players[i].nickname), NULL, i);
+        boat_init(&state->players[i].boat, race_spawn_for_slot(i));
     }
 }
 
@@ -93,14 +98,8 @@ int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr, c
             state->current_player_count++;
             state->players[i].client_addr = *client_addr;
             state->players[i].lastActivityTime = time(NULL);
-            reset_player_to_lobby(&state->players[i], i);
-
-            if (nickname != NULL) {
-                strncpy(state->players[i].nickname, nickname, sizeof(state->players[i].nickname) - 1);
-                state->players[i].nickname[sizeof(state->players[i].nickname) - 1] = '\0';
-            } else {
-                state->players[i].nickname[0] = '\0';
-            }
+            boat_init(&state->players[i].boat, race_spawn_for_slot(i));
+            write_player_nickname(state->players[i].nickname, sizeof(state->players[i].nickname), nickname, state->players[i].playerId);
 
             pthread_mutex_unlock(&state->lock);
             return state->players[i].playerId;
@@ -111,8 +110,9 @@ int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr, c
     return -1;
 }
 
-int game_manager_remove_player(GameState* state, int playerId) {
+int game_manager_remove_player(GameState* state, const int playerId) {
     int returned_to_lobby = 0;
+    int removed_player = 0;
 
     pthread_mutex_lock(&state->lock);
 
@@ -120,10 +120,16 @@ int game_manager_remove_player(GameState* state, int playerId) {
         if (state->players[i].playerId == playerId && state->players[i].isActive) {
             state->players[i].isActive = 0;
             state->current_player_count--;
-            reset_player_to_lobby(&state->players[i], i);
-            state->players[i].nickname[0] = '\0';
+            reset_player_to_lobby(&state->players[i]);
+            write_player_nickname(state->players[i].nickname, sizeof(state->players[i].nickname), NULL, state->players[i].playerId);
+            removed_player = 1;
             break;
         }
+    }
+
+    if (!removed_player) {
+        pthread_mutex_unlock(&state->lock);
+        return -1;
     }
 
     if (state->current_player_count == 0) {
@@ -137,7 +143,7 @@ int game_manager_remove_player(GameState* state, int playerId) {
 
         for (int i = 0; i < MAX_PLAYERS; i++) {
             if (state->players[i].isActive) {
-                reset_player_to_lobby(&state->players[i], i);
+                reset_player_to_lobby(&state->players[i]);
             }
         }
     }
@@ -146,7 +152,7 @@ int game_manager_remove_player(GameState* state, int playerId) {
     return returned_to_lobby;
 }
 
-void game_manager_update_activity(GameState* state, int player_id) {
+void game_manager_update_activity(GameState* state, const int player_id) {
     pthread_mutex_lock(&state->lock);
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (state->players[i].isActive && state->players[i].playerId == player_id) {
@@ -157,26 +163,34 @@ void game_manager_update_activity(GameState* state, int player_id) {
     pthread_mutex_unlock(&state->lock);
 }
 
-int game_manager_mark_ready(GameState* state, int playerId) {
-    int should_schedule = 0;
+int game_manager_mark_ready(GameState* state, const int playerId) {
     int marked_ready = 0;
 
     pthread_mutex_lock(&state->lock);
 
     if (state->phase == GAME_PHASE_LOBBY) {
         for (int i = 0; i < MAX_PLAYERS; i++) {
-            if (state->players[i].isActive && state->players[i].playerId == playerId) {
+            if (state->players[i].isActive && state->players[i].playerId == playerId && !state->players[i].isReady) {
                 state->players[i].isReady = 1;
                 state->players[i].lastActivityTime = time(NULL);
                 marked_ready = 1;
                 break;
             }
         }
+    }
 
-        if (marked_ready && all_active_players_ready_locked(state)) {
-            schedule_game_start_locked(state);
-            should_schedule = 1;
-        }
+    pthread_mutex_unlock(&state->lock);
+    return marked_ready;
+}
+
+int game_manager_try_schedule_start(GameState* state) {
+    int should_schedule = 0;
+
+    pthread_mutex_lock(&state->lock);
+
+    if (state->phase == GAME_PHASE_LOBBY && all_active_players_ready_locked(state)) {
+        schedule_game_start_locked(state);
+        should_schedule = 1;
     }
 
     pthread_mutex_unlock(&state->lock);
@@ -191,14 +205,14 @@ void game_manager_reset_to_lobby(GameState* state) {
 
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (state->players[i].isActive) {
-            reset_player_to_lobby(&state->players[i], i);
+            reset_player_to_lobby(&state->players[i]);
         }
     }
 
     pthread_mutex_unlock(&state->lock);
 }
 
-void game_manager_broadcast(GameState* state, const void* packet, size_t size) {
+void game_manager_broadcast(GameState* state, const void* packet, const size_t size) {
     pthread_mutex_lock(&state->lock);
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (state->players[i].isActive) {

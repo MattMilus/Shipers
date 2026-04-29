@@ -1,8 +1,10 @@
 #include "ConnectionHandler.h"
 
 #include <stdio.h>
-#include <unistd.h>
+#include <string.h>
 #include <sys/socket.h>
+#include <time.h>
+#include <unistd.h>
 
 static void notify_return_to_lobby(GameState* gameState) {
     PacketReturnToLobby response;
@@ -10,26 +12,52 @@ static void notify_return_to_lobby(GameState* gameState) {
     game_manager_broadcast(gameState, &response, sizeof(response));
 }
 
-void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
-    PacketConnect *connectPacket = (PacketConnect *)buffer;
+static void send_timeout_packet(int sock, const struct sockaddr_in* client_addr, const int player_id) {
+    PacketTimeout timeoutPacket;
+    timeoutPacket.type = MSG_TIMEOUT;
+    timeoutPacket.player_id = player_id;
 
-    printf("Handling connection from client '%s'\n", connectPacket->nickname);
-    int new_player_id = game_manager_add_player(gameState, client_addr, connectPacket->nickname);
+    sendto(sock, &timeoutPacket, sizeof(timeoutPacket), 0,
+           (const struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
+}
 
+static void write_lobby_nickname(char* destination, const size_t size, const char* nickname, const int player_id) {
+    if (nickname != NULL && nickname[0] != '\0') {
+        snprintf(destination, size, "%s", nickname);
+        return;
+    }
+
+    snprintf(destination, size, "Player%d", player_id);
+}
+
+void accept_connection(char* buffer, const int sock, struct sockaddr_in *client_addr, GameState *gameState) {
+    (void)buffer;
+
+    const int new_player_id = game_manager_add_player(gameState, client_addr, NULL);
     if (new_player_id == -1) {
-        fprintf(stderr, "Server full, rejecting player '%s'\n", connectPacket->nickname);
+        fprintf(stderr, "Server full, rejecting player.\n");
         return;
     }
 
     PacketAccepted response;
     response.type = MSG_ACCEPTED;
     response.player_id = new_player_id;
-    snprintf(response.nickname, sizeof(response.nickname), "%s", connectPacket->nickname);
 
     sendto(sock, &response, sizeof(response), 0,
            (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
+}
 
-    const uint32_t remaining_countdown_ms = game_manager_get_remaining_countdown_ms(gameState);
+void player_join_lobby(char* buffer, const int sock, struct sockaddr_in *client_addr, GameState *gameState) {
+    PacketJoinLobby *joinPacket = (PacketJoinLobby *)buffer;
+    PacketAckJoinLobby response;
+    PacketNewPlayerJoin broadcastPacket;
+    uint32_t remaining_countdown_ms = 0;
+    int should_send_countdown = 0;
+    int joined_player_found = 0;
+
+    response.type = MSG_ACK_JOIN_LOBBY;
+    response.player_id = joinPacket->player_id;
+    response.active_players_count = 0;
 
     pthread_mutex_lock(&gameState->lock);
 
@@ -38,43 +66,59 @@ void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, 
             continue;
         }
 
-        PacketNewPlayerJoin joinPacket;
-        joinPacket.type = MSG_NEW_PLAYER_JOIN;
-        joinPacket.player_id = gameState->players[i].playerId;
-        snprintf(joinPacket.nickname, sizeof(joinPacket.nickname), "%s", gameState->players[i].nickname);
-
-        if (gameState->players[i].playerId == new_player_id) {
-            continue;
-        }
-
-        sendto(sock, &joinPacket, sizeof(joinPacket), 0,
-               (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
-
-        if (gameState->players[i].isReady) {
-            PacketAckReady readyPacket;
-            readyPacket.type = MSG_ACK_READY;
-            readyPacket.player_id = gameState->players[i].playerId;
-
-            sendto(sock, &readyPacket, sizeof(readyPacket), 0,
-                   (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
+        if (gameState->players[i].playerId == joinPacket->player_id) {
+            write_lobby_nickname(
+                gameState->players[i].nickname,
+                sizeof(gameState->players[i].nickname),
+                joinPacket->nickname,
+                joinPacket->player_id
+            );
+            gameState->players[i].lastActivityTime = time(NULL);
+            joined_player_found = 1;
         }
     }
 
-    PacketNewPlayerJoin broadcastPacket;
-    broadcastPacket.type = MSG_NEW_PLAYER_JOIN;
-    broadcastPacket.player_id = new_player_id;
-    snprintf(broadcastPacket.nickname, sizeof(broadcastPacket.nickname), "%s", connectPacket->nickname);
+    if (joined_player_found) {
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+            if (!gameState->players[i].isActive) {
+                continue;
+            }
 
-    for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (!gameState->players[i].isActive || gameState->players[i].playerId == new_player_id) {
-            continue;
+            LobbyPlayerSnapshot snapshot;
+            snapshot.player_id = gameState->players[i].playerId;
+            snapshot.is_ready = gameState->players[i].isReady;
+            snprintf(snapshot.nickname, sizeof(snapshot.nickname), "%s", gameState->players[i].nickname);
+            response.players[response.active_players_count++] = snapshot;
         }
 
-        sendto(sock, &broadcastPacket, sizeof(broadcastPacket), 0,
-               (struct sockaddr*)&gameState->players[i].client_addr, sizeof(struct sockaddr_in));
+        broadcastPacket.type = MSG_NEW_PLAYER_JOIN;
+        broadcastPacket.player_id = joinPacket->player_id;
+        write_lobby_nickname(
+            broadcastPacket.nickname,
+            sizeof(broadcastPacket.nickname),
+            joinPacket->nickname,
+            joinPacket->player_id
+        );
+
+        if (gameState->phase == GAME_PHASE_COUNTDOWN) {
+            remaining_countdown_ms = game_manager_get_remaining_countdown_ms(gameState);
+            should_send_countdown = 1;
+        }
     }
 
-    if (gameState->phase == GAME_PHASE_COUNTDOWN) {
+    pthread_mutex_unlock(&gameState->lock);
+
+    if (!joined_player_found) {
+        fprintf(stderr, "Rejecting lobby join for unknown player id %d\n", joinPacket->player_id);
+        return;
+    }
+
+    sendto(sock, &response, sizeof(response), 0,
+           (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
+
+    game_manager_broadcast(gameState, &broadcastPacket, sizeof(broadcastPacket));
+
+    if (should_send_countdown) {
         PacketGameScheduledStart scheduledPacket;
         scheduledPacket.type = MSG_GAME_SCHEDULED_START;
         scheduledPacket.countdown_ms = remaining_countdown_ms;
@@ -82,22 +126,24 @@ void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, 
         sendto(sock, &scheduledPacket, sizeof(scheduledPacket), 0,
                (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
     }
-
-    pthread_mutex_unlock(&gameState->lock);
 }
 
-void player_disconnect(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
+void player_disconnect(char* buffer, const int sock, struct sockaddr_in *client_addr, GameState *gameState) {
+    (void)sock;
     (void)client_addr;
     PacketDisconnect *disconnectPacket = (PacketDisconnect *)buffer;
 
-    const int returned_to_lobby = game_manager_remove_player(gameState, disconnectPacket->player_id);
+    const int remove_result = game_manager_remove_player(gameState, disconnectPacket->player_id);
+    if (remove_result < 0) {
+        return;
+    }
 
     PacketPlayerDisconnected response;
     response.type = MSG_PLAYER_DISCONNECTED;
     response.player_id = disconnectPacket->player_id;
 
     game_manager_broadcast(gameState, &response, sizeof(response));
-    if (returned_to_lobby) {
+    if (remove_result == 1) {
         notify_return_to_lobby(gameState);
     }
 }
@@ -107,8 +153,9 @@ void* timeout_checker(void* arg) {
 
     for (;;) {
         sleep(2);
-        time_t now = time(NULL);
+        const time_t now = time(NULL);
         int timed_out_ids[MAX_PLAYERS];
+        struct sockaddr_in timed_out_addrs[MAX_PLAYERS];
         int timed_out_count = 0;
 
         pthread_mutex_lock(&state->lock);
@@ -119,37 +166,35 @@ void* timeout_checker(void* arg) {
             }
 
             if (now - state->players[i].lastActivityTime > TIMEOUT_SECONDS) {
-                timed_out_ids[timed_out_count++] = state->players[i].playerId;
-                state->players[i].isActive = 0;
-                state->current_player_count--;
-                state->players[i].isReady = 0;
-                state->players[i].nickname[0] = '\0';
-            }
-        }
-
-        if (timed_out_count > 0) {
-            state->phase = GAME_PHASE_LOBBY;
-            state->scheduled_start_ms = 0;
-
-            for (int i = 0; i < MAX_PLAYERS; i++) {
-                if (state->players[i].isActive) {
-                    Vector2f spawn = {100.0f, 100.0f + (i * 80.0f)};
-                    boat_init(&state->players[i].boat, spawn);
-                    state->players[i].isReady = 0;
-                }
+                timed_out_ids[timed_out_count] = state->players[i].playerId;
+                timed_out_addrs[timed_out_count] = state->players[i].client_addr;
+                timed_out_count++;
             }
         }
 
         pthread_mutex_unlock(&state->lock);
 
+        int should_notify_lobby = 0;
+
         for (int i = 0; i < timed_out_count; i++) {
+            send_timeout_packet(state->listenfd_socket, &timed_out_addrs[i], timed_out_ids[i]);
+
+            const int remove_result = game_manager_remove_player(state, timed_out_ids[i]);
+            if (remove_result < 0) {
+                continue;
+            }
+
             PacketPlayerDisconnected response;
             response.type = MSG_PLAYER_DISCONNECTED;
             response.player_id = timed_out_ids[i];
             game_manager_broadcast(state, &response, sizeof(response));
+
+            if (remove_result == 1) {
+                should_notify_lobby = 1;
+            }
         }
 
-        if (timed_out_count > 0) {
+        if (should_notify_lobby) {
             notify_return_to_lobby(state);
         }
     }

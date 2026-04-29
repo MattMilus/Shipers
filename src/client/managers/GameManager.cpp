@@ -8,38 +8,74 @@
 #include "SFML/Network/Socket.hpp"
 #include "web_managers/ConnectionManager.h"
 
+namespace {
+std::string fallbackNicknameForId(const int id) {
+    return "Player" + std::to_string(id);
+}
+}
+
 GameManager::GameManager()
-    : playerId(0),
+    : playerId(-1),
       nickname("Player"),
       sessionPhase(SessionPhase::Lobby),
       scheduledStartAt(std::chrono::steady_clock::now()),
+      connectedToServer(false),
       updSocket(nullptr),
       serverIpAddress(sf::IpAddress::resolve("127.0.0.1").value()) {
 }
 
-sf::Vector2f GameManager::lobbySpawnForId(int id) {
-    return {100.0f, 100.0f + ((std::max(1, id) - 1) * 80.0f)};
+sf::Vector2f GameManager::raceSpawnForId(const int id) {
+    return {300.0f + (static_cast<float>(id) * 90.0f), 450.0f};
 }
 
-sf::Vector2f GameManager::raceSpawnForId(int id) {
-    return {300.0f + ((std::max(1, id) - 1) * 90.0f), 450.0f};
-}
-
-int GameManager::connectToServer() {
-    const int id = ConnectionManager::connectToServer(this);
+int GameManager::connectToServer(const std::string& serverIp, const std::string& newNickname) {
+    const int id = ConnectionManager::connectToServer(this, serverIp, newNickname);
     if (id == -1) {
         return -1;
     }
 
-    playerId = id;
+    connectedToServer = true;
     sessionPhase = SessionPhase::Lobby;
-    readyPlayers.clear();
-    addPlayer(id, lobbySpawnForId(id));
+    scheduledStartAt = std::chrono::steady_clock::now();
+
+    if (!hasBoat(playerId)) {
+        addPlayer(playerId, raceSpawnForId(playerId));
+    }
+
+    for (const auto& [idToSync, _] : lobbyPlayers) {
+        if (idToSync == playerId || hasBoat(idToSync)) {
+            continue;
+        }
+
+        addBoat(idToSync, raceSpawnForId(idToSync));
+    }
+
     return playerId;
 }
 
 int GameManager::disconnectFromServer() {
-    return ConnectionManager::disconnectFromServer(this);
+    if (!connectedToServer || updSocket == nullptr || playerId < 0) {
+        resetConnection();
+        return 0;
+    }
+
+    const int disconnectStatus = ConnectionManager::disconnectFromServer(this);
+    resetConnection();
+    return disconnectStatus;
+}
+
+void GameManager::resetConnection() {
+    connectedToServer = false;
+    playerId = -1;
+    sessionPhase = SessionPhase::Lobby;
+    scheduledStartAt = std::chrono::steady_clock::now();
+    activeBoats.clear();
+    clearLobbyPlayers();
+
+    if (updSocket != nullptr) {
+        delete updSocket;
+        updSocket = nullptr;
+    }
 }
 
 void GameManager::updateSessionState() {
@@ -53,25 +89,24 @@ void GameManager::enterLobby() {
     sessionPhase = SessionPhase::Lobby;
     readyPlayers.clear();
     scheduledStartAt = std::chrono::steady_clock::now();
+}
 
-    for (auto it = activeBoats.begin(); it != activeBoats.end();) {
-        if (it->first != playerId) {
-            it = activeBoats.erase(it);
+void GameManager::scheduleRaceStart(const std::uint32_t countdownMs) {
+    sessionPhase = SessionPhase::Countdown;
+    scheduledStartAt = std::chrono::steady_clock::now() + std::chrono::milliseconds(countdownMs);
+
+    for (const auto& [idToSync, _] : lobbyPlayers) {
+        if (idToSync == playerId) {
+            if (!hasBoat(idToSync)) {
+                addPlayer(idToSync, raceSpawnForId(idToSync));
+            }
             continue;
         }
 
-        it->second->setPosition(lobbySpawnForId(playerId));
-        it->second->setTargetPosition(lobbySpawnForId(playerId));
-        it->second->setCurrentAngle(0.0f);
-        it->second->setTargetAngle(0.0f);
-        it->second->setThrottle(0.0f);
-        ++it;
+        if (!hasBoat(idToSync)) {
+            addBoat(idToSync, raceSpawnForId(idToSync));
+        }
     }
-}
-
-void GameManager::scheduleRaceStart(std::uint32_t countdownMs) {
-    sessionPhase = SessionPhase::Countdown;
-    scheduledStartAt = std::chrono::steady_clock::now() + std::chrono::milliseconds(countdownMs);
 
     for (auto& [id, boat] : activeBoats) {
         const sf::Vector2f spawn = raceSpawnForId(id);
@@ -84,18 +119,26 @@ void GameManager::scheduleRaceStart(std::uint32_t countdownMs) {
 }
 
 bool GameManager::shouldSendMoves() const {
-    return sessionPhase == SessionPhase::Race;
+    return connectedToServer && sessionPhase == SessionPhase::Race;
 }
 
 bool GameManager::isReady() const {
+    if (playerId < 0) {
+        return false;
+    }
+
     return readyPlayers.find(playerId) != readyPlayers.end();
 }
 
-void GameManager::markPlayerReady(int id) {
+bool GameManager::isPlayerReady(const int id) const {
+    return readyPlayers.find(id) != readyPlayers.end();
+}
+
+void GameManager::markPlayerReady(const int id) {
     readyPlayers.insert(id);
 }
 
-void GameManager::clearPlayerReady(int id) {
+void GameManager::clearPlayerReady(const int id) {
     readyPlayers.erase(id);
 }
 
@@ -124,7 +167,32 @@ float GameManager::getCountdownSecondsLeft() const {
     return std::chrono::duration<float>(scheduledStartAt - now).count();
 }
 
-int GameManager::addPlayer(int id, sf::Vector2f startPos) {
+bool GameManager::isConnectedToServer() const {
+    return connectedToServer;
+}
+
+void GameManager::setPlayerId(const int id) {
+    playerId = id;
+}
+
+void GameManager::clearLobbyPlayers() {
+    lobbyPlayers.clear();
+    readyPlayers.clear();
+}
+
+void GameManager::upsertLobbyPlayer(const int id, std::string playerNickname) {
+    if (playerNickname.empty()) {
+        playerNickname = fallbackNicknameForId(id);
+    }
+
+    lobbyPlayers[id] = LobbyPlayerInfo{std::move(playerNickname)};
+}
+
+const std::map<int, LobbyPlayerInfo>& GameManager::getLobbyPlayers() const {
+    return lobbyPlayers;
+}
+
+int GameManager::addPlayer(const int id, const sf::Vector2f startPos) {
     if (activeBoats.size() >= 4) {
         return -1;
     }
@@ -141,7 +209,7 @@ sf::UdpSocket* GameManager::getUdpSocket() const {
     return updSocket;
 }
 
-void GameManager::setServerIpAddress(sf::IpAddress ip) {
+void GameManager::setServerIpAddress(const sf::IpAddress ip) {
     serverIpAddress = ip;
 }
 
@@ -149,7 +217,7 @@ sf::IpAddress GameManager::getServerIpAddress() const {
     return serverIpAddress;
 }
 
-int GameManager::addBoat(int id, sf::Vector2f startPos) {
+int GameManager::addBoat(const int id, const sf::Vector2f startPos) {
     if (activeBoats.size() >= 4) {
         return -1;
     }
@@ -162,8 +230,9 @@ bool GameManager::hasBoat(const int id) {
     return activeBoats.find(id) != activeBoats.end();
 }
 
-void GameManager::removeBoat(int id) {
+void GameManager::removeBoat(const int id) {
     readyPlayers.erase(id);
+    lobbyPlayers.erase(id);
     activeBoats.erase(id);
 }
 
@@ -172,7 +241,7 @@ const std::map<int, std::unique_ptr<Boat>>& GameManager::getActiveBoats() const 
 }
 
 Boat* GameManager::getBoatById(const int id) const {
-    auto it = activeBoats.find(id);
+    const auto it = activeBoats.find(id);
     if (it != activeBoats.end()) {
         return it->second.get();
     }
@@ -180,12 +249,9 @@ Boat* GameManager::getBoatById(const int id) const {
 }
 
 Player* GameManager::getPlayer() const {
-    auto it = activeBoats.find(playerId);
+    const auto it = activeBoats.find(playerId);
     if (it != activeBoats.end()) {
-        Player* playerPtr = dynamic_cast<Player*>(it->second.get());
-        if (playerPtr) {
-            return playerPtr;
-        }
+        return dynamic_cast<Player*>(it->second.get());
     }
     return nullptr;
 }
@@ -200,22 +266,22 @@ void GameManager::handleCollisions() {
             Boat* b1 = it1->second.get();
             Boat* b2 = it2->second.get();
 
-            sf::Vector2f pos1 = b1->getPosition();
-            sf::Vector2f pos2 = b2->getPosition();
+            const sf::Vector2f pos1 = b1->getPosition();
+            const sf::Vector2f pos2 = b2->getPosition();
 
-            float dx = pos2.x - pos1.x;
-            float dy = pos2.y - pos1.y;
-            float distanceSquared = dx * dx + dy * dy;
+            const float dx = pos2.x - pos1.x;
+            const float dy = pos2.y - pos1.y;
+            const float distanceSquared = dx * dx + dy * dy;
 
-            float minDistance = COLLIDER_RADIUS * 2.f;
+            const float minDistance = COLLIDER_RADIUS * 2.f;
 
             if (distanceSquared < minDistance * minDistance && distanceSquared > 0.0001f) {
-                float distance = std::sqrt(distanceSquared);
-                float overlap = minDistance - distance;
+                const float distance = std::sqrt(distanceSquared);
+                const float overlap = minDistance - distance;
 
-                sf::Vector2f pushDirection(dx / distance, dy / distance);
-                float repulsionFactor = 5.f;
-                sf::Vector2f pushForce = pushDirection * overlap * repulsionFactor;
+                const sf::Vector2f pushDirection(dx / distance, dy / distance);
+                const float repulsionFactor = 5.f;
+                const sf::Vector2f pushForce = pushDirection * overlap * repulsionFactor;
 
                 b1->addExternalForce(-pushForce);
                 b2->addExternalForce(pushForce);

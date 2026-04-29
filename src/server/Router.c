@@ -19,6 +19,11 @@ void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *cl
             accept_connection(buffer, sock, client_addr, gameState);
             break;
         }
+        case MSG_JOIN_LOBBY: {
+            fprintf(stderr, "Received message JOIN_LOBBY\n");
+            player_join_lobby(buffer, sock, client_addr, gameState);
+            break;
+        }
         case MSG_MOVE: {
             //fprintf(stderr, "Move player\n");
             movePlayer(buffer, sock, client_addr, gameState);

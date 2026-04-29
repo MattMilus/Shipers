@@ -11,6 +11,7 @@
 #define TIMEOUT_SECONDS 5
 
 void accept_connection(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState);
+void player_join_lobby(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState);
 void player_disconnect(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState);
 void* timeout_checker(void* arg);
 

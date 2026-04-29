@@ -52,6 +52,8 @@ else()
             src/client/managers/Renderer.h
             src/client/managers/Panel.cpp
             src/client/managers/Panel.h
+            src/client/managers/TextField.cpp
+            src/client/managers/TextField.h
             src/client/managers/Terminal.cpp
             src/client/managers/Terminal.h
             src/client/managers/GameManager.cpp
@@ -84,4 +86,4 @@ else()
         "$<TARGET_FILE_DIR:ShipersClient>/assets"
         COMMENT "Kopiowanie assets..."
     )
-endif() 
+endif()

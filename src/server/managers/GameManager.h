@@ -13,6 +13,7 @@
 
 #define MAX_PLAYERS 4
 #define GAME_START_COUNTDOWN_MS 5000
+#define RACE_START_ANGLE_DEGREES 0.0f
 
 typedef enum {
     GAME_PHASE_LOBBY = 0,
@@ -44,10 +45,16 @@ typedef struct {
 } GameState;
 
 void game_manager_init(GameState* state, int listenfd_socket);
+// Returns the assigned player id, or -1 when the server is full.
 int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr, const char* nickname);
+// Returns -1 when the player does not exist, 0 when removed without lobby reset,
+// and 1 when the removal cancelled countdown and returned everyone to the lobby.
 int game_manager_remove_player(GameState* state, int playerId);
 void game_manager_update_activity(GameState* state, int playerId);
+// Returns 1 when the player transitioned to ready in the lobby, otherwise 0.
 int game_manager_mark_ready(GameState* state, int playerId);
+// Returns 1 exactly once, when the server schedules a new countdown.
+int game_manager_try_schedule_start(GameState* state);
 void game_manager_reset_to_lobby(GameState* state);
 void game_manager_broadcast(GameState* state, const void* packet, size_t size);
 int game_manager_is_race_active(GameState* state);

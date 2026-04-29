@@ -106,10 +106,19 @@ void Renderer::renderBackground(float time) {
 }
 
 void Renderer::renderBoats() {
+    if (gameManager->getSessionPhase() != SessionPhase::Race) {
+        return;
+    }
+
+    Player* localPlayer = gameManager->getPlayer();
+    if (localPlayer == nullptr) {
+        return;
+    }
+
     // Rendering boats
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
         boatSprite.setPosition(
-            boat->getPosition() - gameManager->getPlayer()->getPosition()
+            boat->getPosition() - localPlayer->getPosition()
             + sf::Glsl::Vec2(resolution.x * 0.5, resolution.y * 0.5)
         );
         boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
@@ -125,18 +134,27 @@ void Renderer::render(float time) {
     for(Panel& panel : panels) {
         panel.draw(window);
     }
+    if (overlayDrawer) {
+        overlayDrawer(window);
+    }
     window.display();
 }
 
 void Renderer::debug() {
     if (ENV_APP_ENVIRONMENT != 1) return;
+    if (gameManager->getSessionPhase() != SessionPhase::Race) return;
+
+    Player* localPlayer = gameManager->getPlayer();
+    if (localPlayer == nullptr) {
+        return;
+    }
 
     sf::CircleShape colliderCircle(COLLIDER_RADIUS);
 
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
         colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
         colliderCircle.setPosition(
-            boat->getPosition() - gameManager->getPlayer()->getPosition()
+            boat->getPosition() - localPlayer->getPosition()
             + sf::Glsl::Vec2(resolution.x * 0.5, resolution.y * 0.5)
         );
 

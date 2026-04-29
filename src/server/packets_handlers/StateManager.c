@@ -1,6 +1,7 @@
 #include "StateManager.h"
 
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "../ServerPackets.h"
@@ -11,19 +12,14 @@ void player_ready(char* buffer, int sock, struct sockaddr_in *client_addr, GameS
 
     PacketPlayerReady *readyPacket = (PacketPlayerReady *)buffer;
 
-    int should_schedule = game_manager_mark_ready(gameState, readyPacket->player_id);
+    if (!game_manager_mark_ready(gameState, readyPacket->player_id)) {
+        return;
+    }
 
     PacketAckReady ackPacket;
     ackPacket.type = MSG_ACK_READY;
     ackPacket.player_id = readyPacket->player_id;
     game_manager_broadcast(gameState, &ackPacket, sizeof(ackPacket));
-
-    if (should_schedule) {
-        PacketGameScheduledStart scheduledPacket;
-        scheduledPacket.type = MSG_GAME_SCHEDULED_START;
-        scheduledPacket.countdown_ms = GAME_START_COUNTDOWN_MS;
-        game_manager_broadcast(gameState, &scheduledPacket, sizeof(scheduledPacket));
-    }
 }
 
 void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
@@ -60,6 +56,14 @@ void* state_broadcaster(void* arg) {
 
     for (;;) {
         usleep(tick_rate_microseconds);
+
+        if (game_manager_try_schedule_start(state)) {
+            PacketGameScheduledStart scheduledPacket;
+            scheduledPacket.type = MSG_GAME_SCHEDULED_START;
+            scheduledPacket.countdown_ms = GAME_START_COUNTDOWN_MS;
+            game_manager_broadcast(state, &scheduledPacket, sizeof(scheduledPacket));
+        }
+
         game_manager_has_countdown_expired(state);
 
         if (!game_manager_is_race_active(state)) {

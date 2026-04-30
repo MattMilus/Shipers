@@ -51,6 +51,7 @@ int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr, c
 // and 1 when the removal cancelled countdown and returned everyone to the lobby.
 int game_manager_remove_player(GameState* state, int playerId);
 void game_manager_update_activity(GameState* state, int playerId);
+<<<<<<< HEAD
 // Returns 1 when the player transitioned to ready in the lobby, otherwise 0.
 int game_manager_mark_ready(GameState* state, int playerId);
 // Returns 1 exactly once, when the server schedules a new countdown.
@@ -60,5 +61,8 @@ void game_manager_broadcast(GameState* state, const void* packet, size_t size);
 int game_manager_is_race_active(GameState* state);
 int game_manager_has_countdown_expired(GameState* state);
 uint32_t game_manager_get_remaining_countdown_ms(GameState* state);
+=======
+void game_manager_resolve_collisions(GameState* state);
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
 
 #endif //SHIPERS_GAMEMANAGER_H

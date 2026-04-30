@@ -22,10 +22,11 @@ protected:
     sf::Vector2f position;
     sf::Vector2f targetPosition;
     sf::Vector2f velocity;
+    sf::Vector2f targetVelocity;
 
     float currentAngle;
     float targetAngle;
-    float angleCommand;
+    float rotation;
 
     float throttle;
 
@@ -43,24 +44,27 @@ public:
     void updateRemote(float deltaTime);
 
     void setThrottle(float newThrottle);
+<<<<<<< HEAD
     void addToAngleCommand(float angleInDegrees);
     void resetControls();
+=======
+    void setRotation(float rotation);
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
     void addExternalForce(sf::Vector2f force);
 
     bool isInCollider(sf::Vector2f position);
 
     void setPosition(sf::Vector2f newPosition);
     void setTargetPosition(sf::Vector2f newPosition);
-    sf::Vector2f getPosition() const;
+    [[nodiscard]] sf::Vector2f getPosition() const;
     void setCurrentAngle(float newRotation );
     void setTargetAngle(float newAngle);
-    float getCurrentAngle() const;
-    float getAngleCommand() const;
-    sf::Vector2f getVelocity() const;
-    float getSpeed() const;
-    float getThrottle() const;
-
-    void debug(sf::RenderTarget& target);
+    [[nodiscard]] float getCurrentAngle() const;
+    [[nodiscard]] float getRotation() const;
+    [[nodiscard]] sf::Vector2f getVelocity() const;
+    void setTargetVelocity(sf::Vector2f newVelocity);
+    [[nodiscard]] float getSpeed() const;
+    [[nodiscard]] float getThrottle() const;
 };
 
 

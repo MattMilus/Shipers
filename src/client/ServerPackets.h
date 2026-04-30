@@ -15,6 +15,7 @@ enum MessageType : std::uint32_t {
     MSG_DISCONNECT = 3,
     MSG_PLAYER_DISCONNECTED = 4,
     MSG_TIMEOUT = 5,
+<<<<<<< HEAD:src/client/managers/web_managers/ServerPackets.h
     MSG_JOIN_LOBBY = 6,
     MSG_ACK_JOIN_LOBBY = 7,
 
@@ -26,6 +27,11 @@ enum MessageType : std::uint32_t {
 
     MSG_GAME_STATE = 100,
     MSG_MOVE = 101
+=======
+    MSG_GAME_START = 100,
+    MSG_GAME_STATE = 101,
+    MSG_MOVE = 102
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93:src/client/ServerPackets.h
 };
 
 typedef struct {
@@ -77,6 +83,7 @@ typedef struct {
 
 typedef struct {
     MessageType type;
+<<<<<<< HEAD:src/client/managers/web_managers/ServerPackets.h
     int player_id;
     char nickname[32];
 } PacketNewPlayerJoin;
@@ -102,11 +109,13 @@ typedef struct {
 
 typedef struct {
     uint32_t type;
+=======
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93:src/client/ServerPackets.h
     int player_id;
     float x;
     float y;
     float currentAngle;
-    float angleCommand;
+    float rotation;
     float throttle;
 } PacketMove;
 
@@ -115,12 +124,21 @@ typedef struct {
     float x;
     float y;
     float currentAngle;
-    float angleCommand;
+    float rotation;
     float throttle;
+    float velocityX;
+    float velocityY;
 } PlayerSnapshot;
 
 typedef struct {
-    uint32_t type;
+    MessageType type;
+    int player_id;
+    int active_players_count;
+    PlayerSnapshot players[4];
+} PacketGameStart;
+
+typedef struct {
+    MessageType type;
     int active_players_count;
     PlayerSnapshot players[4];
 } PacketGameState;

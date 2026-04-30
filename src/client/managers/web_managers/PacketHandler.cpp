@@ -3,8 +3,12 @@
 #include <cstring>
 #include <iostream>
 
+<<<<<<< HEAD
 #include "../Terminal.h"
 #include "ServerPackets.h"
+=======
+#include "../../ServerPackets.h"
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
 
 namespace {
 void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobbyPacket) {
@@ -30,6 +34,13 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
     auto* header = reinterpret_cast<MsgHeader*>(buffer);
 
     switch (header->type) {
+<<<<<<< HEAD
+=======
+
+        case MSG_GAME_START: {
+            gameManager->startGame(buffer, receivedSize);
+        }
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
         case MSG_GAME_STATE: {
             if (receivedSize != sizeof(PacketGameState)) {
                 break;
@@ -38,12 +49,26 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
             PacketGameState statePacket{};
             std::memcpy(&statePacket, buffer, sizeof(PacketGameState));
 
+<<<<<<< HEAD
             for (int i = 0; i < statePacket.active_players_count; i++) {
                 const int remoteId = statePacket.players[i].player_id;
                 printAt(0, 3 + i, "player %d on pos %f, %f", remoteId, statePacket.players[i].x, statePacket.players[i].y);
 
                 if (remoteId == gameManager->getPlayerId()) {
                     continue;
+=======
+                    if (!gameManager->hasBoat(remoteId)) {
+                        gameManager->addBoat(remoteId, sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
+                    }
+
+                    Boat* remoteBoat = gameManager->getBoatById(remoteId);
+
+                    remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
+                    remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
+                    remoteBoat->setTargetVelocity(sf::Vector2f(statePacket.players[i].velocityX, statePacket.players[i].velocityY));
+                    remoteBoat->setRotation(statePacket.players[i].rotation);
+                    remoteBoat->setThrottle(statePacket.players[i].throttle);
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
                 }
 
                 if (!gameManager->hasBoat(remoteId)) {

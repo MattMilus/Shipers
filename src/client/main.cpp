@@ -69,8 +69,17 @@ int main() {
     auto* renderer = new Renderer(gameManager);
     sf::RenderWindow& window = *renderer->initialize();
 
+<<<<<<< HEAD
     auto regCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
     auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
+=======
+    if (gameManager->connectToServer() == -1) {
+        std::cerr << "Error connecting to server." << std::endl;
+        std::cerr << "\nProgram zakonczony. Nacisnij Enter, aby zamknac...";
+        std::cin.get();
+        return -1;
+    }
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
 
     sf::Font uiFont("assets/fonts/arial.ttf");
     sf::Clock globalClock;
@@ -98,6 +107,7 @@ int main() {
     std::string disconnectedMessage = "Enter server IP and nickname, then connect to the lobby.";
     bool wasConnectedLastFrame = false;
 
+<<<<<<< HEAD
     actionButton.setButton([&]() {
         if (!gameManager->isConnectedToServer()) {
             const std::string nickname = nicknameField.getValue();
@@ -250,6 +260,8 @@ int main() {
             renderWindow.draw(emptyText);
         }
     });
+=======
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
 
     while (window.isOpen()) {
         const float time = globalClock.getElapsedTime().asSeconds();
@@ -349,11 +361,17 @@ int main() {
             }
         }
 
+<<<<<<< HEAD
         if (gameManager->getSessionPhase() == SessionPhase::Race) {
             gameManager->handleCollisions();
         }
 
         if (networkClock.getElapsedTime().asSeconds() >= NETWORK_TICK_RATE && gameManager->shouldSendMoves()) {
+=======
+        gameManager->handleCollisions();
+
+        if (networkClock.getElapsedTime().asSeconds() >= NETWORK_TICK_RATE) {
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
             StateManager::sendMoveInformation(gameManager);
             networkClock.restart();
         }

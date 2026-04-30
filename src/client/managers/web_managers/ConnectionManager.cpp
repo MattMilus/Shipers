@@ -9,7 +9,7 @@
 #include <optional>
 #include <string>
 
-#include "ServerPackets.h"
+#include "../../ServerPackets.h"
 #include "../GameManager.h"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/Socket.hpp"

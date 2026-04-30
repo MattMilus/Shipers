@@ -45,7 +45,12 @@ private:
 public:
     GameManager();
 
+<<<<<<< HEAD
     int connectToServer(const std::string& serverIp, const std::string& nickname);
+=======
+    int connectToServer();
+    void startGame(char* buffer, std::size_t receivedSize);
+>>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
     int disconnectFromServer();
     void resetConnection();
     void updateSessionState();

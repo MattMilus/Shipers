@@ -25,6 +25,8 @@ mkdir build-windows
 cd build-windows
 cmake ..
 cmake --build . --target ShipersClient
+cmake --build . --config Debug
+
 
 Po zbudowaniu plik wykonywalny bedzie tutaj:
 

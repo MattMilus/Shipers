@@ -331,7 +331,11 @@ int main() {
 
         if (gameManager->getSessionPhase() == SessionPhase::Race) {
             if (Player* localPlayer = gameManager->getPlayer()) {
-                localPlayer->handleInput(deltaTime);
+                if (window.hasFocus()) {
+                    localPlayer->handleInput(deltaTime);
+                } else {
+                    localPlayer->resetControls();
+                }
             }
         }
 

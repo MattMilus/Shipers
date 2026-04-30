@@ -44,6 +44,7 @@ public:
 
     void setThrottle(float newThrottle);
     void addToAngleCommand(float angleInDegrees);
+    void resetControls();
     void addExternalForce(sf::Vector2f force);
 
     bool isInCollider(sf::Vector2f position);

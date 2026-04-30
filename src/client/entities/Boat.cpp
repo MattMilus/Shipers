@@ -89,6 +89,11 @@ void Boat::addToAngleCommand(float angleInDegrees) {
     angleCommand = std::clamp(angleCommand, -90.f, 90.f);
 }
 
+void Boat::resetControls() {
+    throttle = 0.0f;
+    angleCommand = 0.0f;
+}
+
 void Boat::addExternalForce(sf::Vector2f force) {
     velocity += force;
 }

@@ -2,7 +2,7 @@
 #include <cstdarg>
 
 
-sf::Font arial("assets/fonts/arial.ttf");
+sf::Font arial("assets/fonts/Arial.ttf");
 
 
 Panel::Panel() : text(arial), clickedText(arial) {

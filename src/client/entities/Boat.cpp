@@ -10,8 +10,14 @@
 constexpr float PI = 3.14159265f;
 
 Boat::Boat(sf::Vector2f startPos)
-    : position(startPos), targetPosition(startPos), velocity(0.f, 0.f), currentAngle(0.f), targetAngle(0.f),
-    rotation(0.f), throttle(0.f)
+    : position(startPos),
+      targetPosition(startPos),
+      velocity(0.f, 0.f),
+      targetVelocity(0.f, 0.f),
+      currentAngle(0.f),
+      targetAngle(0.f),
+      rotation(0.f),
+      throttle(0.f)
 {
     acceleration = 300.f;
     turnSpeed = 120.f;
@@ -48,7 +54,6 @@ void Boat::move(float deltaTime) {
 }
 
 void Boat::updateLocal(float deltaTime) {
-    this->updateRemote(deltaTime);
     this->handleRotation(deltaTime);
     this->move(deltaTime);
 }
@@ -57,7 +62,7 @@ void Boat::updateRemote(float deltaTime) {
     // LERP linear interpolation
     // Value 10.0f is the speed of interpolation (the bigger, the faster,
     // but may be less smooth).
-    float lerpFactor = 10.0f * deltaTime;
+    float lerpFactor = std::min(1.0f, 10.0f * deltaTime);
 
     position.x += (targetPosition.x - position.x) * lerpFactor;
     position.y += (targetPosition.y - position.y) * lerpFactor;
@@ -84,8 +89,8 @@ void Boat::setRotation(float newRotation) {
 }
 
 void Boat::resetControls() {
-    throttle = 0.0f;
-    angleCommand = 0.0f;
+    setThrottle(0.0f);
+    setRotation(0.0f);
 }
 
 void Boat::addExternalForce(sf::Vector2f force) {
@@ -107,6 +112,10 @@ void Boat::setTargetPosition(sf::Vector2f newPosition) {
 }
 
 sf::Vector2f Boat::getPosition() const { return position; }
+
+void Boat::setVelocity(sf::Vector2f newVelocity) {
+    velocity = newVelocity;
+}
 
 void Boat::setCurrentAngle(float newRotation) {
     currentAngle = newRotation;

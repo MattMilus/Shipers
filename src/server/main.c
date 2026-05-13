@@ -32,10 +32,23 @@ void* game_loop(void* arg) {
     GameState* state = (GameState*)arg;
 
     const int TICK_RATE_MICROSECONDS = 33333;
-    float deltaTime = TICK_RATE_MICROSECONDS / 1000000.0f;
+    const float deltaTime = TICK_RATE_MICROSECONDS / 1000000.0f;
 
     for (;;) {
         usleep(TICK_RATE_MICROSECONDS);
+
+        if (game_manager_try_schedule_start(state)) {
+            PacketGameScheduledStart scheduledPacket;
+            scheduledPacket.type = MSG_GAME_SCHEDULED_START;
+            scheduledPacket.countdown_ms = GAME_START_COUNTDOWN_MS;
+            game_manager_broadcast(state, &scheduledPacket, sizeof(scheduledPacket));
+        }
+
+        game_manager_has_countdown_expired(state);
+
+        if (!game_manager_is_race_active(state)) {
+            continue;
+        }
 
         pthread_mutex_lock(&state->lock);
 

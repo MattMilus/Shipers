@@ -67,7 +67,7 @@ sf::RenderWindow *Renderer::initialize() {
     }
     screenQuad.setSize(sf::Vector2f{ 800.f, 600.f });
 
-    for (int i = 255; i >= 0; --i) {
+    for (int i = TOTAL_HISTORY_SIZE - 1; i >= 0; --i) {
         uPathHistory[i] = sf::Glsl::Vec2(0.5f, 0.5f);
     }
 
@@ -77,6 +77,9 @@ sf::RenderWindow *Renderer::initialize() {
 void Renderer::renderBackground(float time) {
     // Shader array filling - shifting old positions and adding current one at the start
     int boatIndex = 0;
+    int cameraHistoryOffset = 0;
+    sf::Glsl::Vec2 fallbackHistoryValue(0.5f, 0.5f);
+
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
         boatSprite.setPosition(boat->getPosition());
         boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
@@ -88,8 +91,23 @@ void Renderer::renderBackground(float time) {
         sf::Vector2f currentPos = boat->getPosition();
         // Normalizing player pos to [0, 1] range for shader
         uPathHistory[boatIndex*BOAT_U_PATH_HISTORY_SIZE] = sf::Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
+        if (boatIndex == 0) {
+            fallbackHistoryValue = uPathHistory[0];
+        }
+
+        if (id == gameManager->getPlayerId()) {
+            cameraHistoryOffset = boatIndex * BOAT_U_PATH_HISTORY_SIZE;
+            fallbackHistoryValue = uPathHistory[cameraHistoryOffset];
+        }
 
         boatIndex++;
+    }
+
+    for (int inactiveBoatIndex = boatIndex; inactiveBoatIndex < MAX_BOATS; ++inactiveBoatIndex) {
+        const int segmentStart = inactiveBoatIndex * BOAT_U_PATH_HISTORY_SIZE;
+        for (int historyIndex = 0; historyIndex < BOAT_U_PATH_HISTORY_SIZE; ++historyIndex) {
+            uPathHistory[segmentStart + historyIndex] = fallbackHistoryValue;
+        }
     }
 
     renderTex.clear();
@@ -99,7 +117,8 @@ void Renderer::renderBackground(float time) {
     waveShader.setUniform("image", renderTex.getTexture());
     waveShader.setUniform("uTime", time);
     waveShader.setUniformArray("uPathHistory", uPathHistory, TOTAL_HISTORY_SIZE);
-    waveShader.setUniform("uPlayerId", gameManager->getPlayerId());
+    waveShader.setUniform("uActivePathSamples", boatIndex * BOAT_U_PATH_HISTORY_SIZE);
+    waveShader.setUniform("uCameraHistoryOffset", cameraHistoryOffset);
 
     window.clear();
     window.draw(screenQuad, &waveShader);
@@ -119,7 +138,7 @@ void Renderer::renderBoats() {
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
         boatSprite.setPosition(
             boat->getPosition() - localPlayer->getPosition()
-            + sf::Glsl::Vec2(resolution.x * 0.5, resolution.y * 0.5)
+            + sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
         );
         boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
         window.draw(boatSprite);
@@ -155,7 +174,7 @@ void Renderer::debug() {
         colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
         colliderCircle.setPosition(
             boat->getPosition() - localPlayer->getPosition()
-            + sf::Glsl::Vec2(resolution.x * 0.5, resolution.y * 0.5)
+            + sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
         );
 
         colliderCircle.setFillColor(sf::Color::Transparent);

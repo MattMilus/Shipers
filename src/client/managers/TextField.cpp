@@ -3,7 +3,7 @@
 #include <utility>
 
 namespace {
-sf::Font textFieldFont("assets/fonts/arial.ttf");
+sf::Font textFieldFont("assets/fonts/Arial.ttf");
 }
 
 TextField::TextField()

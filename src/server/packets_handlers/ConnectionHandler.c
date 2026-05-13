@@ -52,8 +52,10 @@ void player_join_lobby(char* buffer, const int sock, struct sockaddr_in *client_
     PacketJoinLobby *joinPacket = (PacketJoinLobby *)buffer;
     PacketAckJoinLobby response;
     PacketNewPlayerJoin broadcastPacket;
+    PacketGameStart startStatePacket;
     uint32_t remaining_countdown_ms = 0;
     int should_send_countdown = 0;
+    int should_send_start_state = 0;
     int joined_player_found = 0;
 
     response.type = MSG_ACK_JOIN_LOBBY;
@@ -104,6 +106,29 @@ void player_join_lobby(char* buffer, const int sock, struct sockaddr_in *client_
         if (gameState->phase == GAME_PHASE_COUNTDOWN) {
             remaining_countdown_ms = game_manager_get_remaining_countdown_ms(gameState);
             should_send_countdown = 1;
+            should_send_start_state = 1;
+
+            startStatePacket.type = MSG_GAME_START;
+            startStatePacket.player_id = joinPacket->player_id;
+            startStatePacket.active_players_count = 0;
+
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                if (!gameState->players[i].isActive) {
+                    continue;
+                }
+
+                PlayerSnapshot snapshot;
+                snapshot.player_id = gameState->players[i].playerId;
+                snapshot.x = gameState->players[i].boat.position.x;
+                snapshot.y = gameState->players[i].boat.position.y;
+                snapshot.currentAngle = gameState->players[i].boat.current_angle;
+                snapshot.rotation = gameState->players[i].boat.rotation;
+                snapshot.throttle = gameState->players[i].boat.throttle;
+                snapshot.velocityX = gameState->players[i].boat.velocity.x;
+                snapshot.velocityY = gameState->players[i].boat.velocity.y;
+
+                startStatePacket.players[startStatePacket.active_players_count++] = snapshot;
+            }
         }
     }
 
@@ -126,39 +151,11 @@ void player_join_lobby(char* buffer, const int sock, struct sockaddr_in *client_
 
         sendto(sock, &scheduledPacket, sizeof(scheduledPacket), 0,
                (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
+    }
 
-        printf("Sending accept to client\n");
-        // @Todo: After adding lobby ensure proper communication and remove it from this place
-        PacketGameStart startStatePacket;
-        startStatePacket.type = MSG_GAME_START;
-        startStatePacket.player_id = new_player_id;
-
-        startStatePacket.active_players_count = 0;
-
-        for (int i = 0; i < MAX_PLAYERS; i++) {
-            if (gameState->players[i].isActive) {
-                PlayerSnapshot snapshot;
-                snapshot.player_id = gameState->players[i].playerId;
-                snapshot.x = gameState->players[i].boat.position.x;
-                snapshot.y = gameState->players[i].boat.position.y;
-                snapshot.currentAngle = gameState->players[i].boat.current_angle;
-                snapshot.rotation = gameState->players[i].boat.rotation;
-                snapshot.throttle = gameState->players[i].boat.throttle;
-
-                startStatePacket.players[startStatePacket.active_players_count] = snapshot;
-                startStatePacket.active_players_count++;
-            }
-        }
-
-        if (startStatePacket.active_players_count > 0) {
-            for (int i = 0; i < MAX_PLAYERS; i++) {
-                if (gameState->players[i].isActive) {
-                    sendto(gameState->listenfd_socket, &startStatePacket, sizeof(PacketGameStart), 0,
-                           (struct sockaddr*)&gameState->players[i].client_addr, sizeof(struct sockaddr_in));
-                }
-            }
-        }
-
+    if (should_send_start_state && startStatePacket.active_players_count > 0) {
+        sendto(sock, &startStatePacket, sizeof(startStatePacket), 0,
+               (struct sockaddr*)client_addr, sizeof(struct sockaddr_in));
     }
 }
 

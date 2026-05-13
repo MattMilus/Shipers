@@ -5,30 +5,25 @@
 
 #pragma pack(push, 1)
 
-typedef enum uint32_t {
+typedef uint32_t MessageType;
+
+enum {
     MSG_CONNECT = 1,
     MSG_ACCEPTED = 2,
     MSG_DISCONNECT = 3,
     MSG_PLAYER_DISCONNECTED = 4,
     MSG_TIMEOUT = 5,
-<<<<<<< HEAD
     MSG_JOIN_LOBBY = 6,
     MSG_ACK_JOIN_LOBBY = 7,
-
-    MSG_NEW_PLAYER_JOIN = 10,          // Server -> clients: "Player joined the lobby"
-    MSG_PLAYER_READY = 11,             // Client -> server: "I am ready"
-    MSG_ACK_READY = 12,                // Server -> clients: "Player X is ready"
-    MSG_GAME_SCHEDULED_START = 13,     // Server -> clients: "Race starts in 5s"
-    MSG_RETURN_TO_LOBBY = 14,          // Server -> clients: "Countdown cancelled, back to lobby"
-
-    MSG_GAME_STATE = 100,
-    MSG_MOVE = 101
-=======
+    MSG_NEW_PLAYER_JOIN = 10,
+    MSG_PLAYER_READY = 11,
+    MSG_ACK_READY = 12,
+    MSG_GAME_SCHEDULED_START = 13,
+    MSG_RETURN_TO_LOBBY = 14,
     MSG_GAME_START = 100,
     MSG_GAME_STATE = 101,
     MSG_MOVE = 102
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
-} MessageType;
+};
 
 typedef struct {
     MessageType type;
@@ -103,7 +98,7 @@ typedef struct {
 } PacketReturnToLobby;
 
 typedef struct {
-    uint32_t type;
+    MessageType type;
     int player_id;
     float x;
     float y;
@@ -124,14 +119,14 @@ typedef struct {
 } PlayerSnapshot;
 
 typedef struct {
-    uint32_t type;
+    MessageType type;
     int player_id;
     int active_players_count;
     PlayerSnapshot players[4];
 } PacketGameStart;
 
 typedef struct {
-    uint32_t type;
+    MessageType type;
     int active_players_count;
     PlayerSnapshot players[4];
 } PacketGameState;

@@ -29,9 +29,12 @@ void StateManager::sendMoveInformation(GameManager *gameManager) {
     if (Player* localPlayer = gameManager->getPlayer()) {
         Boat* myBoat = localPlayer;
 
-        PacketMove movePacket;
+        PacketMove movePacket{};
         movePacket.type = MSG_MOVE;
         movePacket.player_id = gameManager->getPlayerId();
+        movePacket.x = myBoat->getPosition().x;
+        movePacket.y = myBoat->getPosition().y;
+        movePacket.currentAngle = myBoat->getCurrentAngle();
         movePacket.rotation = myBoat->getRotation();
         movePacket.throttle = myBoat->getThrottle();
 
@@ -58,8 +61,5 @@ void StateManager::sendMoveInformation(GameManager *gameManager) {
                 std::cerr << "Unknown SFML error code.\n";
             }
         }
-
-        printf("Boat 0: vel x: %f, vel y: %f\n", myBoat->getVelocity().x, myBoat->getVelocity().y);
-        printf("Boat 0: pos x: %f, pos y: %f\n", myBoat->getPosition().x, myBoat->getPosition().y);
     }
 }

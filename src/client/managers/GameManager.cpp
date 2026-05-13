@@ -2,12 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
-<<<<<<< HEAD
-#include <utility>
-=======
 #include <cstring>
-#include <bits/fs_fwd.h>
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
+#include <utility>
 
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/Socket.hpp"
@@ -40,7 +36,7 @@ int GameManager::connectToServer(const std::string& serverIp, const std::string&
         return -1;
     }
 
-<<<<<<< HEAD
+    playerId = id;
     connectedToServer = true;
     sessionPhase = SessionPhase::Lobby;
     scheduledStartAt = std::chrono::steady_clock::now();
@@ -57,30 +53,46 @@ int GameManager::connectToServer(const std::string& serverIp, const std::string&
         addBoat(idToSync, raceSpawnForId(idToSync));
     }
 
-=======
-    playerId = id;
-    addPlayer(id, sf::Vector2f(100.f, 300.f));
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
     return playerId;
 }
 
-void GameManager::startGame(char* buffer, std::size_t receivedSize) {
-    printf("Received start game");
-    if (receivedSize == sizeof(PacketGameStart)) {
-        printf("Received start game");
-        PacketGameStart gameStartPacket;
-        std::memcpy(&gameStartPacket, buffer, sizeof(PacketGameState));
+void GameManager::startGame(char* buffer, const std::size_t receivedSize) {
+    if (receivedSize != sizeof(PacketGameStart)) {
+        return;
+    }
 
-        for (int i = 0; i < gameStartPacket.active_players_count; i++) {
-            int remoteId = gameStartPacket.players[i].player_id;
+    PacketGameStart gameStartPacket{};
+    std::memcpy(&gameStartPacket, buffer, sizeof(PacketGameStart));
 
-            if (remoteId == getPlayerId()) {
-                // @Todo : Clear this mess
-                removeBoat(remoteId);
-                addPlayer(remoteId, sf::Vector2f(gameStartPacket.players[i].x, gameStartPacket.players[i].y));
+    for (int i = 0; i < gameStartPacket.active_players_count; i++) {
+        const PlayerSnapshot& snapshot = gameStartPacket.players[i];
+        const int remoteId = snapshot.player_id;
+
+        if (remoteId == getPlayerId()) {
+            if (Boat* existingBoat = getBoatById(remoteId)) {
+                if (dynamic_cast<Player*>(existingBoat) == nullptr) {
+                    removeBoat(remoteId);
+                    addPlayer(remoteId, sf::Vector2f(snapshot.x, snapshot.y));
+                }
             } else {
-                addBoat(remoteId, sf::Vector2f(gameStartPacket.players[i].x, gameStartPacket.players[i].y));
+                addPlayer(remoteId, sf::Vector2f(snapshot.x, snapshot.y));
             }
+        } else if (!hasBoat(remoteId)) {
+            addBoat(remoteId, sf::Vector2f(snapshot.x, snapshot.y));
+        }
+
+        if (Boat* boat = getBoatById(remoteId)) {
+            const sf::Vector2f position(snapshot.x, snapshot.y);
+            const sf::Vector2f velocity(snapshot.velocityX, snapshot.velocityY);
+
+            boat->setPosition(position);
+            boat->setTargetPosition(position);
+            boat->setVelocity(velocity);
+            boat->setCurrentAngle(snapshot.currentAngle);
+            boat->setTargetAngle(snapshot.currentAngle);
+            boat->setTargetVelocity(velocity);
+            boat->setRotation(snapshot.rotation);
+            boat->setThrottle(snapshot.throttle);
         }
     }
 }
@@ -144,8 +156,11 @@ void GameManager::scheduleRaceStart(const std::uint32_t countdownMs) {
         const sf::Vector2f spawn = raceSpawnForId(id);
         boat->setPosition(spawn);
         boat->setTargetPosition(spawn);
+        boat->setVelocity({0.0f, 0.0f});
         boat->setCurrentAngle(0.0f);
         boat->setTargetAngle(0.0f);
+        boat->setTargetVelocity({0.0f, 0.0f});
+        boat->setRotation(0.0f);
         boat->setThrottle(0.0f);
     }
 }
@@ -233,7 +248,7 @@ int GameManager::addPlayer(const int id, const sf::Vector2f startPos) {
     return id;
 }
 
-void GameManager::setUdpSocket(sf::UdpSocket *socket) {
+void GameManager::setUdpSocket(sf::UdpSocket* socket) {
     updSocket = socket;
 }
 

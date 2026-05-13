@@ -5,10 +5,12 @@
 #ifndef SHIPERS_GAMEMANAGER_H
 #define SHIPERS_GAMEMANAGER_H
 
-#include <stddef.h>
-#include <stdint.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <time.h>
+
 #include "../entities/Boat.h"
 
 #define MAX_PLAYERS 4
@@ -45,24 +47,16 @@ typedef struct {
 } GameState;
 
 void game_manager_init(GameState* state, int listenfd_socket);
-// Returns the assigned player id, or -1 when the server is full.
-int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr, const char* nickname);
-// Returns -1 when the player does not exist, 0 when removed without lobby reset,
-// and 1 when the removal cancelled countdown and returned everyone to the lobby.
+int game_manager_add_player(GameState* state, struct sockaddr_in* client_addr, const char* nickname);
 int game_manager_remove_player(GameState* state, int playerId);
 void game_manager_update_activity(GameState* state, int playerId);
-<<<<<<< HEAD
-// Returns 1 when the player transitioned to ready in the lobby, otherwise 0.
 int game_manager_mark_ready(GameState* state, int playerId);
-// Returns 1 exactly once, when the server schedules a new countdown.
 int game_manager_try_schedule_start(GameState* state);
 void game_manager_reset_to_lobby(GameState* state);
 void game_manager_broadcast(GameState* state, const void* packet, size_t size);
 int game_manager_is_race_active(GameState* state);
 int game_manager_has_countdown_expired(GameState* state);
 uint32_t game_manager_get_remaining_countdown_ms(GameState* state);
-=======
 void game_manager_resolve_collisions(GameState* state);
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
 
 #endif //SHIPERS_GAMEMANAGER_H

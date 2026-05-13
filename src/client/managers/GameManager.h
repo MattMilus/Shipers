@@ -4,6 +4,7 @@
 
 #ifndef GAMEMANAGER_H
 #define GAMEMANAGER_H
+
 #include <chrono>
 #include <cstdint>
 #include <map>
@@ -11,10 +12,11 @@
 #include <set>
 #include <string>
 
-#include "../entities/Boat.h"
-#include "../entities/Player.h"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/UdpSocket.hpp"
+
+#include "../entities/Boat.h"
+#include "../entities/Player.h"
 
 enum class SessionPhase {
     Lobby,
@@ -42,15 +44,12 @@ private:
 
     int addPlayer(int id, sf::Vector2f startPos);
     static sf::Vector2f raceSpawnForId(int id);
+
 public:
     GameManager();
 
-<<<<<<< HEAD
     int connectToServer(const std::string& serverIp, const std::string& nickname);
-=======
-    int connectToServer();
     void startGame(char* buffer, std::size_t receivedSize);
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
     int disconnectFromServer();
     void resetConnection();
     void updateSessionState();
@@ -86,7 +85,5 @@ public:
 
     int getPlayerId() const;
 };
-
-
 
 #endif //GAMEMANAGER_H

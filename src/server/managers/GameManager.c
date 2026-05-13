@@ -1,6 +1,6 @@
-<<<<<<< HEAD
 #include "GameManager.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -13,7 +13,7 @@ static uint64_t now_ms(void) {
 }
 
 static Vector2f race_spawn_for_slot(const int slot) {
-    Vector2f spawn = {300.0f + ((float)slot * 90.0f), 450.0f};
+    const Vector2f spawn = {300.0f + ((float)slot * 90.0f), 450.0f};
     return spawn;
 }
 
@@ -29,6 +29,7 @@ static void write_player_nickname(char* destination, const size_t destination_si
 static void reset_player_to_lobby(Player* player) {
     player->isReady = 0;
     player->boat.velocity = (Vector2f){0.0f, 0.0f};
+    player->boat.rotation = 0.0f;
     player->boat.throttle = 0.0f;
 }
 
@@ -36,7 +37,8 @@ static void move_player_to_race_start(Player* player, const int slot) {
     const Vector2f spawn = race_spawn_for_slot(slot);
     boat_init(&player->boat, spawn);
     player->boat.current_angle = RACE_START_ANGLE_DEGREES;
-    player->boat.angle_command = RACE_START_ANGLE_DEGREES;
+    player->boat.rotation = 0.0f;
+    player->boat.throttle = 0.0f;
 }
 
 static int all_active_players_ready_locked(GameState* state) {
@@ -68,21 +70,6 @@ static void schedule_game_start_locked(GameState* state) {
 }
 
 void game_manager_init(GameState* state, const int listenfd_socket) {
-=======
-//
-// Created by Wiktor on 14.03.2026.
-//
-
-#include <math.h>
-
-#include "GameManager.h"
-
-#include <stdio.h>
-
-#include "../packets_handlers/StateManager.h"
-
-void game_manager_init(GameState* state, int listenfd_socket) {
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
     pthread_mutex_init(&state->lock, NULL);
 
     state->current_player_count = 0;
@@ -96,14 +83,12 @@ void game_manager_init(GameState* state, int listenfd_socket) {
         state->players[i].playerId = i;
         write_player_nickname(state->players[i].nickname, sizeof(state->players[i].nickname), NULL, i);
         boat_init(&state->players[i].boat, race_spawn_for_slot(i));
+        state->players[i].lastActivityTime = 0;
+        memset(&state->players[i].client_addr, 0, sizeof(state->players[i].client_addr));
     }
-
-    state->players[3].isActive = true;
-    boat_init(&state->players[3].boat, (Vector2f){100.0f, 100.0f});
-    state->players[3].lastActivityTime = time(NULL) + 20;
 }
 
-int game_manager_add_player(GameState* state, struct sockaddr_in *client_addr, const char* nickname) {
+int game_manager_add_player(GameState* state, struct sockaddr_in* client_addr, const char* nickname) {
     pthread_mutex_lock(&state->lock);
 
     if (state->current_player_count >= MAX_PLAYERS) {
@@ -183,7 +168,6 @@ void game_manager_update_activity(GameState* state, const int player_id) {
     pthread_mutex_unlock(&state->lock);
 }
 
-<<<<<<< HEAD
 int game_manager_mark_ready(GameState* state, const int playerId) {
     int marked_ready = 0;
 
@@ -196,53 +180,10 @@ int game_manager_mark_ready(GameState* state, const int playerId) {
                 state->players[i].lastActivityTime = time(NULL);
                 marked_ready = 1;
                 break;
-=======
-void game_manager_resolve_collisions(GameState* state) {
-    float minDist = 2.0f * COLLIDER_RADIUS;
-    float minDistSq = minDist * minDist;
-
-    for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (!state->players[i].isActive) continue;
-
-        for (int j = i + 1; j < MAX_PLAYERS; j++) {
-            if (!state->players[j].isActive) continue;
-
-            Boat* b1 = &state->players[i].boat;
-            Boat* b2 = &state->players[j].boat;
-
-            float dx = b2->position.x - b1->position.x;
-            float dy = b2->position.y - b1->position.y;
-
-            float distSq = (dx * dx) + (dy * dy);
-
-            if (distSq < minDistSq && distSq > 0.0001f) {
-                float dist = sqrtf(distSq);
-
-                float overlap = minDist - dist;
-
-                float nx = dx / dist;
-                float ny = dy / dist;
-
-                float pushX = nx * (overlap * 0.5f);
-                float pushY = ny * (overlap * 0.5f);
-
-                b1->position.x -= pushX;
-                b1->position.y -= pushY;
-
-                b2->position.x += pushX;
-                b2->position.y += pushY;
-
-                float bounceForce = 20.0f;
-                b1->velocity.x -= nx * bounceForce;
-                b1->velocity.y -= ny * bounceForce;
-                b2->velocity.x += nx * bounceForce;
-                b2->velocity.y += ny * bounceForce;
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
             }
         }
     }
 
-<<<<<<< HEAD
     pthread_mutex_unlock(&state->lock);
     return marked_ready;
 }
@@ -328,7 +269,47 @@ uint32_t game_manager_get_remaining_countdown_ms(GameState* state) {
     pthread_mutex_unlock(&state->lock);
     return remaining_ms;
 }
-=======
-    printf("B%d: vel x: %f, vel y: %f\n", 0, state->players[0].boat.velocity.x, state->players[0].boat.velocity.y);
+
+void game_manager_resolve_collisions(GameState* state) {
+    const float minDist = 2.0f * COLLIDER_RADIUS;
+    const float minDistSq = minDist * minDist;
+
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+        if (!state->players[i].isActive) {
+            continue;
+        }
+
+        for (int j = i + 1; j < MAX_PLAYERS; j++) {
+            if (!state->players[j].isActive) {
+                continue;
+            }
+
+            Boat* b1 = &state->players[i].boat;
+            Boat* b2 = &state->players[j].boat;
+
+            const float dx = b2->position.x - b1->position.x;
+            const float dy = b2->position.y - b1->position.y;
+            const float distSq = (dx * dx) + (dy * dy);
+
+            if (distSq < minDistSq && distSq > 0.0001f) {
+                const float dist = sqrtf(distSq);
+                const float overlap = minDist - dist;
+                const float nx = dx / dist;
+                const float ny = dy / dist;
+                const float pushX = nx * (overlap * 0.5f);
+                const float pushY = ny * (overlap * 0.5f);
+                const float bounceForce = 20.0f;
+
+                b1->position.x -= pushX;
+                b1->position.y -= pushY;
+                b2->position.x += pushX;
+                b2->position.y += pushY;
+
+                b1->velocity.x -= nx * bounceForce;
+                b1->velocity.y -= ny * bounceForce;
+                b2->velocity.x += nx * bounceForce;
+                b2->velocity.y += ny * bounceForce;
+            }
+        }
+    }
 }
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93

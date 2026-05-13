@@ -1,16 +1,22 @@
 #include "PacketHandler.h"
 
 #include <cstring>
+#include <cmath>
 #include <iostream>
 
-<<<<<<< HEAD
-#include "../Terminal.h"
-#include "ServerPackets.h"
-=======
 #include "../../ServerPackets.h"
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
 
 namespace {
+constexpr float LOCAL_POSITION_CORRECTION_DISTANCE = 8.0f;
+constexpr float LOCAL_POSITION_SNAP_DISTANCE = 80.0f;
+constexpr float LOCAL_POSITION_CORRECTION_FACTOR = 0.2f;
+constexpr float LOCAL_VELOCITY_CORRECTION_SPEED = 20.0f;
+constexpr float LOCAL_VELOCITY_SNAP_SPEED = 160.0f;
+constexpr float LOCAL_VELOCITY_CORRECTION_FACTOR = 0.25f;
+constexpr float LOCAL_ANGLE_CORRECTION_DEGREES = 3.0f;
+constexpr float LOCAL_ANGLE_SNAP_DEGREES = 45.0f;
+constexpr float LOCAL_ANGLE_CORRECTION_FACTOR = 0.25f;
+
 void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobbyPacket) {
     gameManager->clearLobbyPlayers();
 
@@ -21,6 +27,55 @@ void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobby
         if (playerSnapshot.is_ready != 0) {
             gameManager->markPlayerReady(playerSnapshot.player_id);
         }
+    }
+}
+
+float lengthSquared(const sf::Vector2f& vector) {
+    return (vector.x * vector.x) + (vector.y * vector.y);
+}
+
+float normalizeAngleDifference(float targetAngle, float currentAngle) {
+    float angleDiff = targetAngle - currentAngle;
+    while (angleDiff > 180.0f) angleDiff -= 360.0f;
+    while (angleDiff < -180.0f) angleDiff += 360.0f;
+    return angleDiff;
+}
+
+void reconcileLocalBoat(Boat& localBoat, const PlayerSnapshot& snapshot) {
+    const sf::Vector2f serverPosition(snapshot.x, snapshot.y);
+    const sf::Vector2f serverVelocity(snapshot.velocityX, snapshot.velocityY);
+
+    localBoat.setTargetPosition(serverPosition);
+    localBoat.setTargetVelocity(serverVelocity);
+    localBoat.setTargetAngle(snapshot.currentAngle);
+
+    const sf::Vector2f currentPosition = localBoat.getPosition();
+    const sf::Vector2f positionError = serverPosition - currentPosition;
+    const float positionErrorSquared = lengthSquared(positionError);
+
+    if (positionErrorSquared > LOCAL_POSITION_SNAP_DISTANCE * LOCAL_POSITION_SNAP_DISTANCE) {
+        localBoat.setPosition(serverPosition);
+    } else if (positionErrorSquared > LOCAL_POSITION_CORRECTION_DISTANCE * LOCAL_POSITION_CORRECTION_DISTANCE) {
+        localBoat.setPosition(currentPosition + (positionError * LOCAL_POSITION_CORRECTION_FACTOR));
+    }
+
+    const sf::Vector2f currentVelocity = localBoat.getVelocity();
+    const sf::Vector2f velocityError = serverVelocity - currentVelocity;
+    const float velocityErrorSquared = lengthSquared(velocityError);
+
+    if (velocityErrorSquared > LOCAL_VELOCITY_SNAP_SPEED * LOCAL_VELOCITY_SNAP_SPEED) {
+        localBoat.setVelocity(serverVelocity);
+    } else if (velocityErrorSquared > LOCAL_VELOCITY_CORRECTION_SPEED * LOCAL_VELOCITY_CORRECTION_SPEED) {
+        localBoat.setVelocity(currentVelocity + (velocityError * LOCAL_VELOCITY_CORRECTION_FACTOR));
+    }
+
+    const float currentAngle = localBoat.getCurrentAngle();
+    const float angleDiff = normalizeAngleDifference(snapshot.currentAngle, currentAngle);
+
+    if (std::fabs(angleDiff) > LOCAL_ANGLE_SNAP_DEGREES) {
+        localBoat.setCurrentAngle(snapshot.currentAngle);
+    } else if (std::fabs(angleDiff) > LOCAL_ANGLE_CORRECTION_DEGREES) {
+        localBoat.setCurrentAngle(currentAngle + (angleDiff * LOCAL_ANGLE_CORRECTION_FACTOR));
     }
 }
 }
@@ -34,13 +89,10 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
     auto* header = reinterpret_cast<MsgHeader*>(buffer);
 
     switch (header->type) {
-<<<<<<< HEAD
-=======
-
         case MSG_GAME_START: {
             gameManager->startGame(buffer, receivedSize);
+            break;
         }
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
         case MSG_GAME_STATE: {
             if (receivedSize != sizeof(PacketGameState)) {
                 break;
@@ -49,36 +101,32 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
             PacketGameState statePacket{};
             std::memcpy(&statePacket, buffer, sizeof(PacketGameState));
 
-<<<<<<< HEAD
             for (int i = 0; i < statePacket.active_players_count; i++) {
-                const int remoteId = statePacket.players[i].player_id;
-                printAt(0, 3 + i, "player %d on pos %f, %f", remoteId, statePacket.players[i].x, statePacket.players[i].y);
+                const PlayerSnapshot& snapshot = statePacket.players[i];
+                const int remoteId = snapshot.player_id;
 
                 if (remoteId == gameManager->getPlayerId()) {
-                    continue;
-=======
-                    if (!gameManager->hasBoat(remoteId)) {
-                        gameManager->addBoat(remoteId, sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
+                    Boat* localBoat = gameManager->getBoatById(remoteId);
+                    if (localBoat != nullptr) {
+                        reconcileLocalBoat(*localBoat, snapshot);
                     }
-
-                    Boat* remoteBoat = gameManager->getBoatById(remoteId);
-
-                    remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
-                    remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
-                    remoteBoat->setTargetVelocity(sf::Vector2f(statePacket.players[i].velocityX, statePacket.players[i].velocityY));
-                    remoteBoat->setRotation(statePacket.players[i].rotation);
-                    remoteBoat->setThrottle(statePacket.players[i].throttle);
->>>>>>> fe0a395227799a729b4d41892a4ca4981f9b3b93
+                    continue;
                 }
 
                 if (!gameManager->hasBoat(remoteId)) {
-                    gameManager->addBoat(remoteId, sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
+                    gameManager->addBoat(remoteId, sf::Vector2f(snapshot.x, snapshot.y));
                 }
 
                 Boat* remoteBoat = gameManager->getBoatById(remoteId);
-                remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
-                remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
-                remoteBoat->setThrottle(statePacket.players[i].throttle);
+                if (remoteBoat == nullptr) {
+                    continue;
+                }
+
+                remoteBoat->setTargetPosition(sf::Vector2f(snapshot.x, snapshot.y));
+                remoteBoat->setTargetAngle(snapshot.currentAngle);
+                remoteBoat->setTargetVelocity(sf::Vector2f(snapshot.velocityX, snapshot.velocityY));
+                remoteBoat->setRotation(snapshot.rotation);
+                remoteBoat->setThrottle(snapshot.throttle);
             }
             break;
         }

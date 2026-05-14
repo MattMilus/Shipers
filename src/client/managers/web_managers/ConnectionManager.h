@@ -9,7 +9,8 @@
 
 class ConnectionManager {
 public:
-    static int connectToServer(GameManager* game_manager, const std::string& serverIp, const std::string& nickname);
+    static int connectToServer(GameManager* game_manager, const std::string& serverIp);
+    static int joinLobby(GameManager* gameManager, const std::string& nickname);
     static int disconnectFromServer(GameManager* game_manager);
 };
 

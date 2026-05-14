@@ -376,3 +376,4 @@ build/
 build-linux/
 build-windows/
 build/linux/
+build*/

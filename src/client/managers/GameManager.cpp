@@ -31,13 +31,19 @@ sf::Vector2f GameManager::raceSpawnForId(const int id) {
 }
 
 int GameManager::connectToServer(const std::string& serverIp, const std::string& newNickname) {
-    const int id = ConnectionManager::connectToServer(this, serverIp, newNickname);
+    const int id = ConnectionManager::connectToServer(this, serverIp);
+
     if (id == -1) {
         return -1;
     }
 
     playerId = id;
     connectedToServer = true;
+
+    if (ConnectionManager::joinLobby(this, newNickname) < 0) {
+        return -1;
+    }
+
     sessionPhase = SessionPhase::Lobby;
     scheduledStartAt = std::chrono::steady_clock::now();
 

@@ -34,8 +34,7 @@ void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobby
 }
 
 int ConnectionManager::connectToServer(GameManager* gameManager,
-                                       const std::string& ipString,
-                                       const std::string& nickname) {
+                                       const std::string& ipString) {
     const std::optional<sf::IpAddress> serverIp = sf::IpAddress::resolve(ipString);
     if (!serverIp) {
         std::cerr << "Invalid IP address!\n";
@@ -45,7 +44,6 @@ int ConnectionManager::connectToServer(GameManager* gameManager,
     auto* dynamicSocket = new sf::UdpSocket();
     gameManager->setUdpSocket(dynamicSocket);
     gameManager->setServerIpAddress(serverIp.value());
-    gameManager->setNickname(nickname);
 
     sf::UdpSocket& socket = *dynamicSocket;
 
@@ -93,19 +91,27 @@ int ConnectionManager::connectToServer(GameManager* gameManager,
     }
 
     gameManager->setPlayerId(acceptedPlayerId);
+    return acceptedPlayerId;
+}
+
+int ConnectionManager::joinLobby(GameManager* gameManager, const std::string& nickname) {
+    gameManager->setNickname(nickname);
 
     PacketJoinLobby joinLobbyPacket{};
     joinLobbyPacket.type = MSG_JOIN_LOBBY;
-    joinLobbyPacket.player_id = acceptedPlayerId;
+    joinLobbyPacket.player_id = gameManager->getPlayerId();
     std::strncpy(joinLobbyPacket.nickname, nickname.c_str(), sizeof(joinLobbyPacket.nickname) - 1);
     joinLobbyPacket.nickname[sizeof(joinLobbyPacket.nickname) - 1] = '\0';
 
-    if (socket.send(&joinLobbyPacket, sizeof(joinLobbyPacket), *serverIp, ENV_SERVER_PORT) != sf::Socket::Status::Done) {
+    sf::UdpSocket* socket = gameManager->getUdpSocket();
+
+    if (socket->send(&joinLobbyPacket, sizeof(joinLobbyPacket), gameManager->getServerIpAddress(), ENV_SERVER_PORT) != sf::Socket::Status::Done) {
         std::cerr << "Error while joining lobby!\n";
         gameManager->resetConnection();
         return -1;
     }
 
+    sf::Clock timeoutClock;
     timeoutClock.restart();
 
     while (timeoutClock.getElapsedTime().asSeconds() < 5.0f) {
@@ -114,7 +120,7 @@ int ConnectionManager::connectToServer(GameManager* gameManager,
         std::optional<sf::IpAddress> senderIp;
         unsigned short senderPort = 0;
 
-        if (socket.receive(buffer, sizeof(buffer), received, senderIp, senderPort) != sf::Socket::Status::Done) {
+        if (socket->receive(buffer, sizeof(buffer), received, senderIp, senderPort) != sf::Socket::Status::Done) {
             continue;
         }
 
@@ -124,12 +130,12 @@ int ConnectionManager::connectToServer(GameManager* gameManager,
 
         PacketAckJoinLobby lobbyPacket{};
         std::memcpy(&lobbyPacket, buffer, sizeof(PacketAckJoinLobby));
-        if (lobbyPacket.type != MSG_ACK_JOIN_LOBBY || lobbyPacket.player_id != acceptedPlayerId) {
+        if (lobbyPacket.type != MSG_ACK_JOIN_LOBBY || lobbyPacket.player_id != gameManager->getPlayerId()) {
             continue;
         }
 
         loadLobbySnapshot(gameManager, lobbyPacket);
-        return acceptedPlayerId;
+        return gameManager->getPlayerId();
     }
 
     std::cerr << "Lobby handshake timed out.\n";

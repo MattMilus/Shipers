@@ -1,0 +1,78 @@
+SHIPERS - kompilacja i uruchomienie
+
+1. Wymagania
+
+- Windows / macOS: klient buduje sie przez CMake i pobiera SFML automatycznie.
+- Linux: serwer buduje sie jako osobny target w C.
+- CMake musi byc dostepny w PATH.
+
+2. Bardzo wazne
+
+Nie uzywaj tego samego katalogu build na Windows i Linux/WSL.
+
+Dobre przyklady:
+
+- build-windows
+- build-linux
+
+Jesli raz odpaliles CMake na Windowsie w katalogu build, to WSL nie powinien juz uzywac tego samego build.
+
+3. Klient - Windows
+
+W katalogu projektu uruchom:
+
+mkdir build-windows
+cd build-windows
+cmake ..
+cmake --build . --target ShipersClient
+cmake --build . --config Debug
+
+
+Po zbudowaniu plik wykonywalny bedzie tutaj:
+
+build-windows\Debug\ShipersClient.exe
+
+Uruchomienie:
+
+cd C:\Users\barte\Shipers\build-windows\Debug
+.\ShipersClient.exe
+
+Po uruchomieniu:
+
+- wpisz IP serwera w okienku lobby,
+- wpisz nick,
+- kliknij CONNECT,
+- potem kliknij READY.
+
+4. Serwer - Linux / WSL
+
+W katalogu projektu uruchom:
+
+mkdir -p build-linux
+cd build-linux
+cmake -G "Unix Makefiles" ..
+cmake --build . --target ShipersServer
+
+Uruchomienie:
+
+./ShipersServer
+
+Serwer nasluchuje na porcie 5000.
+
+Jesli wczesniej uzyles zlego katalogu build, usun go albo wybierz nowy, np. build-linux.
+
+5. Typowy scenariusz testowy
+
+1. Uruchom serwer.
+2. Uruchom klienta na kazdym komputerze.
+3. W lobby wpisz IP serwera, np.:
+   TO CO ZWRÓCI 'hostname -I'
+   jesli grasz lokalnie na tym samym komputerze.
+4. Kazdy gracz wpisuje swoj nick i klika CONNECT.
+5. Gdy wszyscy sa w lobby, kazdy klika READY.
+6. Serwer sam sprawdza, czy wszyscy aktywni gracze sa gotowi, i startuje odliczanie.
+
+6. Szybka uwaga
+
+- Jesli jeden klient przestanie odpowiadac przez 5 sekund, serwer go wyrzuci.
+- Gra powinna wtedy toczyc sie dalej, o ile nie trzeba anulowac countdownu w lobby.

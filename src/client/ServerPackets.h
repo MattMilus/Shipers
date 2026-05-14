@@ -15,6 +15,13 @@ enum MessageType : std::uint32_t {
     MSG_DISCONNECT = 3,
     MSG_PLAYER_DISCONNECTED = 4,
     MSG_TIMEOUT = 5,
+    MSG_JOIN_LOBBY = 6,
+    MSG_ACK_JOIN_LOBBY = 7,
+    MSG_NEW_PLAYER_JOIN = 10,
+    MSG_PLAYER_READY = 11,
+    MSG_ACK_READY = 12,
+    MSG_GAME_SCHEDULED_START = 13,
+    MSG_RETURN_TO_LOBBY = 14,
     MSG_GAME_START = 100,
     MSG_GAME_STATE = 101,
     MSG_MOVE = 102
@@ -34,6 +41,25 @@ typedef struct {
 } PacketAccepted;
 
 typedef struct {
+    int player_id;
+    int is_ready;
+    char nickname[32];
+} LobbyPlayerSnapshot;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+    char nickname[32];
+} PacketJoinLobby;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+    int active_players_count;
+    LobbyPlayerSnapshot players[4];
+} PacketAckJoinLobby;
+
+typedef struct {
     MessageType type;
     int player_id;
 } PacketDisconnect;
@@ -47,6 +73,31 @@ typedef struct {
     MessageType type;
     int player_id;
 } PacketTimeout;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+    char nickname[32];
+} PacketNewPlayerJoin;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketPlayerReady;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketAckReady;
+
+typedef struct {
+    MessageType type;
+    std::uint32_t countdown_ms;
+} PacketGameScheduledStart;
+
+typedef struct {
+    MessageType type;
+} PacketReturnToLobby;
 
 typedef struct {
     MessageType type;
@@ -83,4 +134,5 @@ typedef struct {
 } PacketGameState;
 
 #pragma pack(pop)
-#endif //SHIPERS_SERVERPACKETS_H
+
+#endif // SHIPERS_SERVERPACKETS_H

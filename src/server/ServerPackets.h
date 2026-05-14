@@ -1,37 +1,61 @@
-//
-// Created by Wiktor on 14.03.2026.
-//
-
 #ifndef SHIPERS_MESSAGETYPEENUM_H
 #define SHIPERS_MESSAGETYPEENUM_H
 
 #include <stdint.h>
-#include <netinet/in.h>
 
-// Using uint32_t,to ensure, 4 bytes used on every system
-typedef enum uint32_t {
+#pragma pack(push, 1)
+
+typedef uint32_t MessageType;
+
+enum {
     MSG_CONNECT = 1,
     MSG_ACCEPTED = 2,
     MSG_DISCONNECT = 3,
     MSG_PLAYER_DISCONNECTED = 4,
     MSG_TIMEOUT = 5,
+    MSG_JOIN_LOBBY = 6,
+    MSG_ACK_JOIN_LOBBY = 7,
+    MSG_NEW_PLAYER_JOIN = 10,
+    MSG_PLAYER_READY = 11,
+    MSG_ACK_READY = 12,
+    MSG_GAME_SCHEDULED_START = 13,
+    MSG_RETURN_TO_LOBBY = 14,
     MSG_GAME_START = 100,
     MSG_GAME_STATE = 101,
     MSG_MOVE = 102
-} MessageType;
+};
 
 typedef struct {
     MessageType type;
 } MsgHeader;
 
 typedef struct {
-    MsgHeader header;
+    MessageType type;
 } PacketConnect;
 
 typedef struct {
     MessageType type;
     int player_id;
 } PacketAccepted;
+
+typedef struct {
+    int player_id;
+    int is_ready;
+    char nickname[32];
+} LobbyPlayerSnapshot;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+    char nickname[32];
+} PacketJoinLobby;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+    int active_players_count;
+    LobbyPlayerSnapshot players[4];
+} PacketAckJoinLobby;
 
 typedef struct {
     MessageType type;
@@ -49,7 +73,32 @@ typedef struct {
 } PacketTimeout;
 
 typedef struct {
-    uint32_t type;
+    MessageType type;
+    int player_id;
+    char nickname[32];
+} PacketNewPlayerJoin;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketPlayerReady;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketAckReady;
+
+typedef struct {
+    MessageType type;
+    uint32_t countdown_ms;
+} PacketGameScheduledStart;
+
+typedef struct {
+    MessageType type;
+} PacketReturnToLobby;
+
+typedef struct {
+    MessageType type;
     int player_id;
     float x;
     float y;
@@ -70,16 +119,18 @@ typedef struct {
 } PlayerSnapshot;
 
 typedef struct {
-    uint32_t type;
+    MessageType type;
     int player_id;
     int active_players_count;
     PlayerSnapshot players[4];
 } PacketGameStart;
 
 typedef struct {
-    uint32_t type;
+    MessageType type;
     int active_players_count;
     PlayerSnapshot players[4];
 } PacketGameState;
 
-#endif //SHIPERS_MESSAGETYPEENUM_H
+#pragma pack(pop)
+
+#endif // SHIPERS_MESSAGETYPEENUM_H

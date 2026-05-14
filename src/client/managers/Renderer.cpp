@@ -67,7 +67,7 @@ sf::RenderWindow *Renderer::initialize() {
     }
     screenQuad.setSize(sf::Vector2f{ 800.f, 600.f });
 
-    for (int i = 255; i >= 0; --i) {
+    for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i >= 0; --i) {
         uPathHistory[i] = sf::Glsl::Vec2(0.5f, 0.5f);
     }
 
@@ -75,21 +75,13 @@ sf::RenderWindow *Renderer::initialize() {
 }
 
 void Renderer::renderBackground(float time) {
-    // Shader array filling - shifting old positions and adding current one at the start
-    int boatIndex = 0;
-    for (auto& [id, boat] : gameManager->getActiveBoats()) {
-        boatSprite.setPosition(boat->getPosition());
-        boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
+    for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i > 0; --i) {
+        uPathHistory[i] = uPathHistory[i - 1];
+    }
 
-        for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i > 0; --i) {
-            uPathHistory[boatIndex*BOAT_U_PATH_HISTORY_SIZE + i] = uPathHistory[boatIndex*BOAT_U_PATH_HISTORY_SIZE + i - 1];
-        }
-
-        sf::Vector2f currentPos = boat->getPosition();
-        // Normalizing player pos to [0, 1] range for shader
-        uPathHistory[boatIndex*BOAT_U_PATH_HISTORY_SIZE] = sf::Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
-
-        boatIndex++;
+    if (Player* localPlayer = gameManager->getPlayer()) {
+        const sf::Vector2f currentPos = localPlayer->getPosition();
+        uPathHistory[0] = sf::Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
     }
 
     renderTex.clear();
@@ -98,19 +90,28 @@ void Renderer::renderBackground(float time) {
 
     waveShader.setUniform("image", renderTex.getTexture());
     waveShader.setUniform("uTime", time);
-    waveShader.setUniformArray("uPathHistory", uPathHistory, TOTAL_HISTORY_SIZE);
-    waveShader.setUniform("uPlayerId", gameManager->getPlayerId());
+    waveShader.setUniformArray("uPathHistory", uPathHistory, BOAT_U_PATH_HISTORY_SIZE);
+    waveShader.setUniform("uPlayerId", 1);
 
     window.clear();
     window.draw(screenQuad, &waveShader);
 }
 
 void Renderer::renderBoats() {
+    if (gameManager->getSessionPhase() != SessionPhase::Race) {
+        return;
+    }
+
+    Player* localPlayer = gameManager->getPlayer();
+    if (localPlayer == nullptr) {
+        return;
+    }
+
     // Rendering boats
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
         boatSprite.setPosition(
-            boat->getPosition() - gameManager->getPlayer()->getPosition()
-            + sf::Glsl::Vec2(resolution.x * 0.5, resolution.y * 0.5)
+            boat->getPosition() - localPlayer->getPosition()
+            + sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
         );
         boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
         window.draw(boatSprite);
@@ -125,19 +126,28 @@ void Renderer::render(float time) {
     for(Panel& panel : panels) {
         panel.draw(window);
     }
+    if (overlayDrawer) {
+        overlayDrawer(window);
+    }
     window.display();
 }
 
 void Renderer::debug() {
     if (ENV_APP_ENVIRONMENT != 1) return;
+    if (gameManager->getSessionPhase() != SessionPhase::Race) return;
+
+    Player* localPlayer = gameManager->getPlayer();
+    if (localPlayer == nullptr) {
+        return;
+    }
 
     sf::CircleShape colliderCircle(COLLIDER_RADIUS);
 
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
         colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
         colliderCircle.setPosition(
-            boat->getPosition() - gameManager->getPlayer()->getPosition()
-            + sf::Glsl::Vec2(resolution.x * 0.5, resolution.y * 0.5)
+            boat->getPosition() - localPlayer->getPosition()
+            + sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
         );
 
         colliderCircle.setFillColor(sf::Color::Transparent);

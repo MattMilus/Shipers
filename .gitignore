@@ -373,3 +373,7 @@ _deps/
 CMakeCache.txt
 wslBuild/
 build/
+build-linux/
+build-windows/
+build/linux/
+build*/

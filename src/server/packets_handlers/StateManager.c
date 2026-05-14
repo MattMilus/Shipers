@@ -1,16 +1,35 @@
-//
-// Created by Wiktor on 14.03.2026.
-//
-
 #include "StateManager.h"
 
-#include <stdio.h>
-#include <unistd.h>
+#include <sys/socket.h>
+#include <time.h>
 
 #include "../ServerPackets.h"
 
-void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState) {
-    PacketMove *move_data = (PacketMove *)buffer;
+void player_ready(char* buffer, int sock, struct sockaddr_in* client_addr, GameState* gameState) {
+    (void)sock;
+    (void)client_addr;
+
+    PacketPlayerReady* readyPacket = (PacketPlayerReady*)buffer;
+
+    if (!game_manager_mark_ready(gameState, readyPacket->player_id)) {
+        return;
+    }
+
+    PacketAckReady ackPacket;
+    ackPacket.type = MSG_ACK_READY;
+    ackPacket.player_id = readyPacket->player_id;
+    game_manager_broadcast(gameState, &ackPacket, sizeof(ackPacket));
+}
+
+void movePlayer(char* buffer, int sock, struct sockaddr_in* client_addr, GameState* gameState) {
+    (void)sock;
+    (void)client_addr;
+
+    if (!game_manager_is_race_active(gameState)) {
+        return;
+    }
+
+    PacketMove* move_data = (PacketMove*)buffer;
 
     pthread_mutex_lock(&gameState->lock);
 
@@ -18,7 +37,6 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameSta
         if (gameState->players[i].isActive && gameState->players[i].playerId == move_data->player_id) {
             gameState->players[i].boat.rotation = move_data->rotation;
             gameState->players[i].boat.throttle = move_data->throttle;
-
             gameState->players[i].lastActivityTime = time(NULL);
             break;
         }
@@ -27,10 +45,6 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameSta
     pthread_mutex_unlock(&gameState->lock);
 }
 
-/**
- * Make sure to lock gamestate->lock before calling this function
- * @param state
- */
 void broadcast_state(GameState* state) {
     PacketGameState packet;
     packet.type = MSG_GAME_STATE;
@@ -53,13 +67,14 @@ void broadcast_state(GameState* state) {
         }
     }
 
-    if (packet.active_players_count > 0) {
-        for (int i = 0; i < MAX_PLAYERS; i++) {
-            if (state->players[i].isActive) {
-                sendto(state->listenfd_socket, &packet, sizeof(PacketGameState), 0,
-                       (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
-            }
+    if (packet.active_players_count == 0) {
+        return;
+    }
+
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+        if (state->players[i].isActive) {
+            sendto(state->listenfd_socket, &packet, sizeof(packet), 0,
+                   (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
         }
     }
-    printf("Boat 0: pos x: %f, pos y: %f\n", state->players[0].boat.position.x, state->players[0].boat.position.y);
 }

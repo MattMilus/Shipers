@@ -1,17 +1,86 @@
-//
-// Created by Wiktor on 14.03.2026.
-//
-
 #include "PacketHandler.h"
 
 #include <cstring>
+#include <cmath>
 #include <iostream>
-#include "../Terminal.h"
 
 #include "../../ServerPackets.h"
 
+namespace {
+constexpr float LOCAL_POSITION_CORRECTION_DISTANCE = 8.0f;
+constexpr float LOCAL_POSITION_SNAP_DISTANCE = 80.0f;
+constexpr float LOCAL_POSITION_CORRECTION_FACTOR = 0.2f;
+constexpr float LOCAL_VELOCITY_CORRECTION_SPEED = 20.0f;
+constexpr float LOCAL_VELOCITY_SNAP_SPEED = 160.0f;
+constexpr float LOCAL_VELOCITY_CORRECTION_FACTOR = 0.25f;
+constexpr float LOCAL_ANGLE_CORRECTION_DEGREES = 3.0f;
+constexpr float LOCAL_ANGLE_SNAP_DEGREES = 45.0f;
+constexpr float LOCAL_ANGLE_CORRECTION_FACTOR = 0.25f;
 
-void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize, GameManager* gameManager) {
+void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobbyPacket) {
+    gameManager->clearLobbyPlayers();
+
+    for (int i = 0; i < lobbyPacket.active_players_count; ++i) {
+        const LobbyPlayerSnapshot& playerSnapshot = lobbyPacket.players[i];
+        gameManager->upsertLobbyPlayer(playerSnapshot.player_id, playerSnapshot.nickname);
+
+        if (playerSnapshot.is_ready != 0) {
+            gameManager->markPlayerReady(playerSnapshot.player_id);
+        }
+    }
+}
+
+float lengthSquared(const sf::Vector2f& vector) {
+    return (vector.x * vector.x) + (vector.y * vector.y);
+}
+
+float normalizeAngleDifference(float targetAngle, float currentAngle) {
+    float angleDiff = targetAngle - currentAngle;
+    while (angleDiff > 180.0f) angleDiff -= 360.0f;
+    while (angleDiff < -180.0f) angleDiff += 360.0f;
+    return angleDiff;
+}
+
+void reconcileLocalBoat(Boat& localBoat, const PlayerSnapshot& snapshot) {
+    const sf::Vector2f serverPosition(snapshot.x, snapshot.y);
+    const sf::Vector2f serverVelocity(snapshot.velocityX, snapshot.velocityY);
+
+    localBoat.setTargetPosition(serverPosition);
+    localBoat.setTargetVelocity(serverVelocity);
+    localBoat.setTargetAngle(snapshot.currentAngle);
+
+    const sf::Vector2f currentPosition = localBoat.getPosition();
+    const sf::Vector2f positionError = serverPosition - currentPosition;
+    const float positionErrorSquared = lengthSquared(positionError);
+
+    if (positionErrorSquared > LOCAL_POSITION_SNAP_DISTANCE * LOCAL_POSITION_SNAP_DISTANCE) {
+        localBoat.setPosition(serverPosition);
+    } else if (positionErrorSquared > LOCAL_POSITION_CORRECTION_DISTANCE * LOCAL_POSITION_CORRECTION_DISTANCE) {
+        localBoat.setPosition(currentPosition + (positionError * LOCAL_POSITION_CORRECTION_FACTOR));
+    }
+
+    const sf::Vector2f currentVelocity = localBoat.getVelocity();
+    const sf::Vector2f velocityError = serverVelocity - currentVelocity;
+    const float velocityErrorSquared = lengthSquared(velocityError);
+
+    if (velocityErrorSquared > LOCAL_VELOCITY_SNAP_SPEED * LOCAL_VELOCITY_SNAP_SPEED) {
+        localBoat.setVelocity(serverVelocity);
+    } else if (velocityErrorSquared > LOCAL_VELOCITY_CORRECTION_SPEED * LOCAL_VELOCITY_CORRECTION_SPEED) {
+        localBoat.setVelocity(currentVelocity + (velocityError * LOCAL_VELOCITY_CORRECTION_FACTOR));
+    }
+
+    const float currentAngle = localBoat.getCurrentAngle();
+    const float angleDiff = normalizeAngleDifference(snapshot.currentAngle, currentAngle);
+
+    if (std::fabs(angleDiff) > LOCAL_ANGLE_SNAP_DEGREES) {
+        localBoat.setCurrentAngle(snapshot.currentAngle);
+    } else if (std::fabs(angleDiff) > LOCAL_ANGLE_CORRECTION_DEGREES) {
+        localBoat.setCurrentAngle(currentAngle + (angleDiff * LOCAL_ANGLE_CORRECTION_FACTOR));
+    }
+}
+}
+
+void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receivedSize, GameManager* gameManager) {
     if (receivedSize < sizeof(MsgHeader)) {
         std::cerr << "Rejecting packet, too short (" << receivedSize << " bytes).\n";
         return;
@@ -20,54 +89,125 @@ void PacketHandler::handleIncomingPacket(char* buffer, std::size_t receivedSize,
     auto* header = reinterpret_cast<MsgHeader*>(buffer);
 
     switch (header->type) {
-
         case MSG_GAME_START: {
             gameManager->startGame(buffer, receivedSize);
+            break;
         }
         case MSG_GAME_STATE: {
-            printAt(0, 3, "Received MSG_GAME_STATE\n");
-            if (receivedSize == sizeof(PacketGameState)) {
-                PacketGameState statePacket;
-                std::memcpy(&statePacket, buffer, sizeof(PacketGameState));
+            if (receivedSize != sizeof(PacketGameState)) {
+                break;
+            }
 
-                for (int i = 0; i < statePacket.active_players_count; i++) {
-                    printAt(0, 4 + i, "player %d on pos %f, %f", i, statePacket.players[i].x, statePacket.players[i].y);
-                    int remoteId = statePacket.players[i].player_id;
+            PacketGameState statePacket{};
+            std::memcpy(&statePacket, buffer, sizeof(PacketGameState));
 
-                    if (!gameManager->hasBoat(remoteId)) {
-                        gameManager->addBoat(remoteId, sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
+            for (int i = 0; i < statePacket.active_players_count; i++) {
+                const PlayerSnapshot& snapshot = statePacket.players[i];
+                const int remoteId = snapshot.player_id;
+
+                if (remoteId == gameManager->getPlayerId()) {
+                    Boat* localBoat = gameManager->getBoatById(remoteId);
+                    if (localBoat != nullptr) {
+                        reconcileLocalBoat(*localBoat, snapshot);
                     }
-
-                    Boat* remoteBoat = gameManager->getBoatById(remoteId);
-
-                    remoteBoat->setTargetPosition(sf::Vector2f(statePacket.players[i].x, statePacket.players[i].y));
-                    remoteBoat->setTargetAngle(statePacket.players[i].currentAngle);
-                    remoteBoat->setTargetVelocity(sf::Vector2f(statePacket.players[i].velocityX, statePacket.players[i].velocityY));
-                    remoteBoat->setRotation(statePacket.players[i].rotation);
-                    remoteBoat->setThrottle(statePacket.players[i].throttle);
+                    continue;
                 }
+
+                if (!gameManager->hasBoat(remoteId)) {
+                    gameManager->addBoat(remoteId, sf::Vector2f(snapshot.x, snapshot.y));
+                }
+
+                Boat* remoteBoat = gameManager->getBoatById(remoteId);
+                if (remoteBoat == nullptr) {
+                    continue;
+                }
+
+                remoteBoat->setTargetPosition(sf::Vector2f(snapshot.x, snapshot.y));
+                remoteBoat->setTargetAngle(snapshot.currentAngle);
+                remoteBoat->setTargetVelocity(sf::Vector2f(snapshot.velocityX, snapshot.velocityY));
+                remoteBoat->setRotation(snapshot.rotation);
+                remoteBoat->setThrottle(snapshot.throttle);
             }
             break;
         }
         case MSG_PLAYER_DISCONNECTED: {
-            if (receivedSize == sizeof(PacketPlayerDisconnected)) {
-                PacketPlayerDisconnected disconnectPacket;
-                std::memcpy(&disconnectPacket, buffer, sizeof(PacketPlayerDisconnected));
+            if (receivedSize != sizeof(PacketPlayerDisconnected)) {
+                break;
+            }
 
+            PacketPlayerDisconnected disconnectPacket{};
+            std::memcpy(&disconnectPacket, buffer, sizeof(PacketPlayerDisconnected));
+
+            if (disconnectPacket.player_id == gameManager->getPlayerId()) {
+                gameManager->resetConnection();
+            } else {
                 gameManager->removeBoat(disconnectPacket.player_id);
             }
             break;
         }
         case MSG_TIMEOUT: {
-            if (receivedSize == sizeof(PacketTimeout)) {
-                PacketTimeout timeoutPacket;
-                std::memcpy(&timeoutPacket, buffer, sizeof(PacketTimeout));
+            if (receivedSize != sizeof(PacketTimeout)) {
+                break;
+            }
 
+            PacketTimeout timeoutPacket{};
+            std::memcpy(&timeoutPacket, buffer, sizeof(PacketTimeout));
+
+            if (timeoutPacket.player_id == gameManager->getPlayerId()) {
+                gameManager->resetConnection();
+            } else {
                 gameManager->removeBoat(timeoutPacket.player_id);
             }
             break;
         }
+        case MSG_ACK_JOIN_LOBBY: {
+            if (receivedSize != sizeof(PacketAckJoinLobby)) {
+                break;
+            }
 
+            PacketAckJoinLobby lobbyPacket{};
+            std::memcpy(&lobbyPacket, buffer, sizeof(PacketAckJoinLobby));
+            loadLobbySnapshot(gameManager, lobbyPacket);
+            break;
+        }
+        case MSG_NEW_PLAYER_JOIN: {
+            if (receivedSize != sizeof(PacketNewPlayerJoin)) {
+                break;
+            }
+
+            PacketNewPlayerJoin joinPacket{};
+            std::memcpy(&joinPacket, buffer, sizeof(PacketNewPlayerJoin));
+
+            gameManager->upsertLobbyPlayer(joinPacket.player_id, joinPacket.nickname);
+            if (joinPacket.player_id != gameManager->getPlayerId() && !gameManager->hasBoat(joinPacket.player_id)) {
+                gameManager->addBoat(joinPacket.player_id, sf::Vector2f(0.0f, 0.0f));
+            }
+            break;
+        }
+        case MSG_ACK_READY: {
+            if (receivedSize != sizeof(PacketAckReady)) {
+                break;
+            }
+
+            PacketAckReady readyPacket{};
+            std::memcpy(&readyPacket, buffer, sizeof(PacketAckReady));
+            gameManager->markPlayerReady(readyPacket.player_id);
+            break;
+        }
+        case MSG_GAME_SCHEDULED_START: {
+            if (receivedSize != sizeof(PacketGameScheduledStart)) {
+                break;
+            }
+
+            PacketGameScheduledStart scheduledPacket{};
+            std::memcpy(&scheduledPacket, buffer, sizeof(PacketGameScheduledStart));
+            gameManager->scheduleRaceStart(scheduledPacket.countdown_ms);
+            break;
+        }
+        case MSG_RETURN_TO_LOBBY: {
+            gameManager->enterLobby();
+            break;
+        }
         default:
             std::cerr << "Received unknown message: " << header->type << "\n";
             break;

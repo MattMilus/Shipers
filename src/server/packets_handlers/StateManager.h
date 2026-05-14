@@ -7,8 +7,8 @@
 
 #include "../managers/GameManager.h"
 
-void movePlayer(char* buffer, int sock, struct sockaddr_in *client_addr, GameState *gameState);
-
+void player_ready(char* buffer, int sock, struct sockaddr_in* client_addr, GameState* gameState);
+void movePlayer(char* buffer, int sock, struct sockaddr_in* client_addr, GameState* gameState);
 void broadcast_state(GameState* state);
 
 #endif //SHIPERS_STATEMANAGER_H

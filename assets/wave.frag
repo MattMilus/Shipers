@@ -29,13 +29,16 @@ void main() {
     // chromatic aberration spread per channel
     vec3 totalOffsets = vec3(0.0);
 
-    for (int i = 0; i < 256; ++i) {
+    for (int i = 0; i < 512; ++i) {
         vec2 centre = uPathHistory[i];
         vec2 dir = pos - centre;
         float dist = length(dir);
         float age = float(i) / 255.0;
+        if(i >= 256)  age = 0.25;
+
         float wave = getOffset(age, dist);
         float strength = 1.0 - age;
+
         dir = normalize(dir);
         totalDir += dir * wave * strength;
 

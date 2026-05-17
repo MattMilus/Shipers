@@ -67,9 +67,10 @@ sf::RenderWindow *Renderer::initialize() {
     }
     screenQuad.setSize(sf::Vector2f{ 800.f, 600.f });
 
-    for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i >= 0; --i) {
-        uPathHistory[i] = sf::Glsl::Vec2(0.5f, 0.5f);
-    }
+    for (int i = TOTAL_HISTORY_SIZE - 1; i >= 0; --i) {         // "co z oczu to z serca..."
+        uPathHistory[i] = sf::Glsl::Vec2(100000.0f, 100000.0f); // czemu nie dasz po prostu FLT_MAX?
+    }                                                           // bo wtedy fale ³aduj¹ siê niewiadomo ile
+	uPathHistory[0] = sf::Glsl::Vec2(0.f, 0.f); // "...ale nie kamera"
 
     return &window;
 }
@@ -78,10 +79,15 @@ void Renderer::renderBackground(float time) {
     for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i > 0; --i) {
         uPathHistory[i] = uPathHistory[i - 1];
     }
-
+    
     if (Player* localPlayer = gameManager->getPlayer()) {
         const sf::Vector2f currentPos = localPlayer->getPosition();
         uPathHistory[0] = sf::Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
+    }
+
+    std::vector<Bouy> bouys = gameManager->getTrack().getBouys();
+    for (int i = 0; i < bouys.size() - 1; ++i) {
+        uPathHistory[i + BOAT_U_PATH_HISTORY_SIZE] = bouys[i].position;
     }
 
     renderTex.clear();
@@ -90,7 +96,7 @@ void Renderer::renderBackground(float time) {
 
     waveShader.setUniform("image", renderTex.getTexture());
     waveShader.setUniform("uTime", time);
-    waveShader.setUniformArray("uPathHistory", uPathHistory, BOAT_U_PATH_HISTORY_SIZE);
+    waveShader.setUniformArray("uPathHistory", uPathHistory, TOTAL_HISTORY_SIZE);
     waveShader.setUniform("uPlayerId", 1);
 
     window.clear();

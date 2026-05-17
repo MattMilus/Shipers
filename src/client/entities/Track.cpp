@@ -61,4 +61,5 @@ void Track::generateTrack(std::vector<sf::Vector2f> controlPoints) {
             bouys.emplace_back(nextPos);
         }
     }
+	printf("Generated track with %zu bouys.\n", bouys.size());
 }

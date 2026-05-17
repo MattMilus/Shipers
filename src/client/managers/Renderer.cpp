@@ -97,6 +97,29 @@ void Renderer::renderBackground(float time) {
     window.draw(screenQuad, &waveShader);
 }
 
+void Renderer::renderTrack() {
+    if (gameManager->getSessionPhase() != SessionPhase::Race) {
+        return;
+    }
+
+	const std::vector<Bouy>& bouys = gameManager->getTrack().getBouys();
+
+	const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
+	
+	sf::CircleShape bouyShape(25.f);
+	bouyShape.setOrigin({ 25.f, 25.f });
+	bouyShape.setFillColor(sf::Color::Yellow);
+	bouyShape.setOutlineThickness(3.f);
+	bouyShape.setOutlineColor(sf::Color::Black);
+	for (const Bouy& bouy : bouys) {
+		bouyShape.setPosition(
+			bouy.position - cameraPosition
+			+ sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
+		);
+		window.draw(bouyShape);
+	}
+}
+
 void Renderer::renderBoats() {
     if (gameManager->getSessionPhase() != SessionPhase::Race) {
         return;
@@ -122,6 +145,7 @@ void Renderer::render(float time) {
     window.clear();
     renderBackground(time);
     renderBoats();
+	renderTrack();
     debug();
     for(Panel& panel : panels) {
         panel.draw(window);

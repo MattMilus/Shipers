@@ -17,6 +17,7 @@
 
 #include "../entities/Boat.h"
 #include "../entities/Player.h"
+#include "../entities/Track.h"
 
 enum class SessionPhase {
     Lobby,
@@ -30,6 +31,7 @@ struct LobbyPlayerInfo {
 
 class GameManager {
 private:
+	Track track;
     std::map<int, std::unique_ptr<Boat>> activeBoats;
     std::map<int, LobbyPlayerInfo> lobbyPlayers;
     std::set<int> readyPlayers;
@@ -79,6 +81,8 @@ public:
     int addBoat(int id, sf::Vector2f startPos);
     bool hasBoat(int id);
     void removeBoat(int id);
+	void generateTrack(std::vector<sf::Vector2f> controlPoints);
+	[[nodiscard]] const Track& getTrack() const;
     [[nodiscard]] const std::map<int, std::unique_ptr<Boat>>& getActiveBoats() const;
     [[nodiscard]] Boat* getBoatById(int id) const;
     [[nodiscard]] Player* getPlayer() const;

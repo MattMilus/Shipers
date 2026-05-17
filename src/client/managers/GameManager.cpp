@@ -289,6 +289,14 @@ void GameManager::removeBoat(const int id) {
     activeBoats.erase(id);
 }
 
+void GameManager::generateTrack(std::vector<sf::Vector2f> controlPoints) {
+	track.generateTrack(controlPoints);
+}
+
+const Track& GameManager::getTrack() const {
+	return track;
+}
+
 const std::map<int, std::unique_ptr<Boat>>& GameManager::getActiveBoats() const {
     return activeBoats;
 }

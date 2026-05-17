@@ -49,6 +49,7 @@ private:
 protected:
     void renderBackground(float time);
     void renderBoats();
+    void renderTrack();
 public:
     Renderer(GameManager* game_manager);
 

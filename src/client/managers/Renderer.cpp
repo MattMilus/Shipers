@@ -67,9 +67,10 @@ sf::RenderWindow *Renderer::initialize() {
     }
     screenQuad.setSize(sf::Vector2f{ 800.f, 600.f });
 
-    for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i >= 0; --i) {
-        uPathHistory[i] = sf::Glsl::Vec2(0.5f, 0.5f);
-    }
+    for (int i = TOTAL_HISTORY_SIZE - 1; i >= 0; --i) {         // "co z oczu to z serca..."
+        uPathHistory[i] = sf::Glsl::Vec2(100000.0f, 100000.0f); // czemu nie dasz po prostu FLT_MAX?
+    }                                                           // bo wtedy fale ³aduj¹ siê niewiadomo ile
+	uPathHistory[0] = sf::Glsl::Vec2(0.f, 0.f); // "...ale nie kamera"
 
     return &window;
 }
@@ -94,17 +95,45 @@ void Renderer::renderBackground(float time) {
 
     
 
+    std::vector<Bouy> bouys = gameManager->getTrack().getBouys();
+    for (int i = 0; i < bouys.size() - 1; ++i) {
+        uPathHistory[i + BOAT_U_PATH_HISTORY_SIZE] = bouys[i].position;
+    }
+
     renderTex.clear();
     renderTex.draw(screenQuad, &checkerShader);
     renderTex.display();
 
     waveShader.setUniform("image", renderTex.getTexture());
     waveShader.setUniform("uTime", time);
-    waveShader.setUniformArray("uPathHistory", uPathHistory, BOAT_U_PATH_HISTORY_SIZE);
+    waveShader.setUniformArray("uPathHistory", uPathHistory, TOTAL_HISTORY_SIZE);
     waveShader.setUniform("uPlayerId", 1);
 
     window.clear();
     window.draw(screenQuad, &waveShader);
+}
+
+void Renderer::renderTrack() {
+    if (gameManager->getSessionPhase() != SessionPhase::Race) {
+        return;
+    }
+
+	const std::vector<Bouy>& bouys = gameManager->getTrack().getBouys();
+
+	const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
+	
+	sf::CircleShape bouyShape(25.f);
+	bouyShape.setOrigin({ 25.f, 25.f });
+	bouyShape.setFillColor(sf::Color::Yellow);
+	bouyShape.setOutlineThickness(3.f);
+	bouyShape.setOutlineColor(sf::Color::Black);
+	for (const Bouy& bouy : bouys) {
+		bouyShape.setPosition(
+			bouy.position - cameraPosition
+			+ sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
+		);
+		window.draw(bouyShape);
+	}
 }
 
 void Renderer::renderBoats() {
@@ -132,6 +161,7 @@ void Renderer::render(float time) {
     window.clear();
     renderBackground(time);
     renderBoats();
+	renderTrack();
     debug();
     for(Panel& panel : panels) {
         panel.draw(window);

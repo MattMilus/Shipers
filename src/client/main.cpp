@@ -71,6 +71,7 @@ int main() {
 
     auto regCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
     auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
+    auto textCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Text);
 
     sf::Font uiFont("assets/fonts/Arial.ttf");
     sf::Clock globalClock;
@@ -305,8 +306,11 @@ int main() {
         };
         if (showLobbyOverlay && actionButton.contains(mousePos) && regCursor && handCursor) {
             window.setMouseCursor(*handCursor);
+        } else if (showLobbyOverlay && (serverIpField.contains(mousePos) || nicknameField.contains(mousePos)) && textCursor) {
+            window.setMouseCursor(*textCursor);
         } else if (regCursor) {
             window.setMouseCursor(*regCursor);
+     
         }
 
         if (sf::UdpSocket* socket = gameManager->getUdpSocket()) {

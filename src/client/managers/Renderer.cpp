@@ -1,4 +1,4 @@
-//
+﻿//
 // Created by Wiktor on 12.03.2026.
 //
 
@@ -54,7 +54,7 @@ void Renderer::loadSprites() {
     boatSprite.setOrigin({ boatTexture.getSize().x / 2.f, boatTexture.getSize().y / 2.f });
 }
 
-sf::RenderWindow *Renderer::initialize() {
+sf::RenderWindow* Renderer::initialize() {
     window.create(sf::VideoMode({ 800, 600 }), "GPU Ripples");
     window.setFramerateLimit(60);
 
@@ -67,21 +67,34 @@ sf::RenderWindow *Renderer::initialize() {
     }
     screenQuad.setSize(sf::Vector2f{ 800.f, 600.f });
 
-    for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i >= 0; --i) {
-        uPathHistory[i] = sf::Glsl::Vec2(0.5f, 0.5f);
-    }
+    for (int i = TOTAL_HISTORY_SIZE - 1; i >= 0; --i) {         // "co z oczu to z serca..."
+        uPathHistory[i] = sf::Glsl::Vec2(10000.0f, 10000.0f);   // czemu nie dasz po prostu FLT_MAX?
+    }                                                           // bo wtedy fale laduja sie niewiadomo ile
+    uPathHistory[0] = sf::Glsl::Vec2(0.f, 0.f); // "...ale nie kamera"
 
     return &window;
 }
 
 void Renderer::renderBackground(float time) {
-    for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i > 0; --i) {
-        uPathHistory[i] = uPathHistory[i - 1];
+    const auto& boats = gameManager->getActiveBoats();
+    const int boatCount = static_cast<int>(boats.size());
+
+    if (boatCount > 0) {
+        const int playerID = gameManager->getPlayerId();
+        for (int i = 0; i < boatCount; ++i) {
+            const auto& boat = boats.at((playerID + i) % boatCount);
+            sf::Vector2f pos = boat->getPosition();
+            uPathHistory[i] = sf::Glsl::Vec2(pos.x / 800.f, pos.y / 600.f);
+        }
+
+        for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i >= boatCount; --i) {
+            uPathHistory[i] = uPathHistory[i - boatCount];
+        }
     }
 
-    if (Player* localPlayer = gameManager->getPlayer()) {
-        const sf::Vector2f currentPos = localPlayer->getPosition();
-        uPathHistory[0] = sf::Glsl::Vec2(currentPos.x / 800.f, currentPos.y / 600.f);
+    const auto& bouys = gameManager->getTrack().getBouys();
+    for (int i = 0; i < bouys.size() - 1; ++i) {
+        uPathHistory[i + BOAT_U_PATH_HISTORY_SIZE] = bouys[i].position;
     }
 
     renderTex.clear();
@@ -90,14 +103,13 @@ void Renderer::renderBackground(float time) {
 
     waveShader.setUniform("image", renderTex.getTexture());
     waveShader.setUniform("uTime", time);
-    waveShader.setUniformArray("uPathHistory", uPathHistory, BOAT_U_PATH_HISTORY_SIZE);
-    waveShader.setUniform("uPlayerId", 1);
+    waveShader.setUniformArray("uPathHistory", uPathHistory, TOTAL_HISTORY_SIZE);
 
     window.clear();
     window.draw(screenQuad, &waveShader);
 }
 
-void Renderer::renderTrack() {
+void Renderer::renderTrack(float time) {
     if (gameManager->getSessionPhase() != SessionPhase::Race) {
         return;
     }
@@ -106,12 +118,15 @@ void Renderer::renderTrack() {
 
 	const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
 	
-	sf::CircleShape bouyShape(25.f);
+	sf::CircleShape bouyShape;
 	bouyShape.setOrigin({ 25.f, 25.f });
 	bouyShape.setFillColor(sf::Color::Yellow);
 	bouyShape.setOutlineThickness(3.f);
 	bouyShape.setOutlineColor(sf::Color::Black);
+	float bouyRadiusOffset = 0.0f;
 	for (const Bouy& bouy : bouys) {
+        bouyShape.setRadius(bouy.radius * (0.75 + sin(time + bouyRadiusOffset) * 0.25));
+		bouyRadiusOffset += 0.15f;
 		bouyShape.setPosition(
 			bouy.position - cameraPosition
 			+ sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
@@ -145,7 +160,7 @@ void Renderer::render(float time) {
     window.clear();
     renderBackground(time);
     renderBoats();
-	renderTrack();
+	renderTrack(time);
     debug();
     for(Panel& panel : panels) {
         panel.draw(window);

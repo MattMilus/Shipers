@@ -71,7 +71,7 @@ else()
             src/client/managers/web_managers/PacketHandler.cpp
             src/client/managers/web_managers/PacketHandler.h
             src/client/ServerPackets.h
-    )
+     "src/client/entities/Track.h" "src/client/entities/Track.cpp")
 
     if(MINGW)
         target_link_options(ShipersClient PRIVATE -static -static-libgcc -static-libstdc++)
@@ -84,12 +84,11 @@ else()
             SFML::Network
     )
 
-    add_custom_command(TARGET ShipersClient POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E remove_directory
-        "$<TARGET_FILE_DIR:ShipersClient>/assets"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/src/client/assets"
-        "$<TARGET_FILE_DIR:ShipersClient>/assets"
-        COMMENT "Kopiowanie assets..."
+    add_custom_target(CopyShipersAssets
+        COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/src/client/assets" "${CMAKE_CURRENT_BINARY_DIR}/assets"
+        COMMENT "Wymuszone kopiowanie assets..."
     )
+    
+    add_dependencies(ShipersClient CopyShipersAssets)
 endif()

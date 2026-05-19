@@ -23,7 +23,7 @@ sf::Vector2f getBSplinePoint(const sf::Vector2f& p0,
 }
 
 void Track::generateTrack(std::vector<sf::Vector2f> controlPoints) {
-	bouys.clear();
+    buoys.clear();
 
     float separationDistance = 50.f;
 
@@ -51,14 +51,14 @@ void Track::generateTrack(std::vector<sf::Vector2f> controlPoints) {
             );
 
 			// Prevent bouys from being too close to each other
-			if (!bouys.empty()) {
-				sf::Vector2f lastPos = bouys.back().position;
+			if (!buoys.empty()) {
+				sf::Vector2f lastPos = buoys.back().position;
 				if (std::hypot(nextPos.x - lastPos.x, nextPos.y - lastPos.y) < separationDistance) {
 					continue;
 				}
 			}
 
-            bouys.emplace_back(nextPos);
+            buoys.emplace_back(nextPos);
         }
     }
 }

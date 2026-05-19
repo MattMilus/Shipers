@@ -114,24 +114,24 @@ void Renderer::renderTrack(float time) {
         return;
     }
 
-	const std::vector<Bouy>& bouys = gameManager->getTrack().getBouys();
+	const std::vector<Buoy>& bouys = gameManager->getTrack().getBouys();
 
 	const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
 	
-	sf::CircleShape bouyShape;
-	bouyShape.setOrigin({ 25.f, 25.f });
-	bouyShape.setFillColor(sf::Color::Yellow);
-	bouyShape.setOutlineThickness(3.f);
-	bouyShape.setOutlineColor(sf::Color::Black);
-	float bouyRadiusOffset = 0.0f;
-	for (const Bouy& bouy : bouys) {
-        bouyShape.setRadius(bouy.radius * (0.75 + sin(time + bouyRadiusOffset) * 0.25));
-		bouyRadiusOffset += 0.15f;
-		bouyShape.setPosition(
+	sf::CircleShape buoyShape;
+    buoyShape.setOrigin({ 25.f, 25.f });
+    buoyShape.setFillColor(sf::Color::Yellow);
+    buoyShape.setOutlineThickness(3.f);
+    buoyShape.setOutlineColor(sf::Color::Black);
+	float buoyRadiusOffset = 0.0f;
+	for (const Buoy& bouy : bouys) {
+        buoyShape.setRadius(bouy.radius * (0.75 + sin(time + buoyRadiusOffset) * 0.25));
+		buoyRadiusOffset += 0.55f;
+        buoyShape.setPosition(
 			bouy.position - cameraPosition
 			+ sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
 		);
-		window.draw(bouyShape);
+		window.draw(buoyShape);
 	}
 }
 

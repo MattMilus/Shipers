@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
+#include "../entities/Track.h"
 
 static uint64_t now_ms(void) {
     struct timespec ts;
@@ -86,6 +87,13 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
         state->players[i].lastActivityTime = 0;
         memset(&state->players[i].client_addr, 0, sizeof(state->players[i].client_addr));
     }
+
+    const Vector2f control_points[] = {
+    {0.0f, 0.0f},
+    {300.0f, 700.0f},
+    {1000.0f, 1000.0f}
+    };
+    track_generate(control_points, 3);
 }
 
 int game_manager_add_player(GameState* state, struct sockaddr_in* client_addr, const char* nickname) {

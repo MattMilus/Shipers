@@ -24,6 +24,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             src/server/Router.h
             src/server/entities/Boat.c
             src/server/entities/Boat.h
+            src/server/entities/Track.c
+            src/server/entities/Track.h
             src/server/packets_handlers/StateManager.c
             src/server/packets_handlers/StateManager.h
             src/server/ServerPackets.h

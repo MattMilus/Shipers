@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include "../entities/Boat.h"
+#include "../entities/Track.h"
 
 #define MAX_PLAYERS 4
 #define GAME_START_COUNTDOWN_MS 5000

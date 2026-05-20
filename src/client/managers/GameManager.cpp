@@ -321,63 +321,98 @@ int GameManager::getPlayerId() const {
     return playerId;
 }
 
-void GameManager::handleBoatCollisions() {
-    for (auto it1 = activeBoats.begin(); it1 != activeBoats.end(); ++it1) {
-        for (auto it2 = std::next(it1); it2 != activeBoats.end(); ++it2) {
-            Boat* b1 = it1->second.get();
-            Boat* b2 = it2->second.get();
+void GameManager::boatCollision(Boat* b1, Boat* b2) {
+    const float minDistance = COLLIDER_RADIUS * 2.f;
+    const float minDistanceSq = minDistance * minDistance;
 
-            const sf::Vector2f pos1 = b1->getPosition();
-            const sf::Vector2f pos2 = b2->getPosition();
+    const sf::Vector2f pos1 = b1->getPosition();
+    const sf::Vector2f pos2 = b2->getPosition();
 
-            const float dx = pos2.x - pos1.x;
-            const float dy = pos2.y - pos1.y;
-            const float distanceSquared = dx * dx + dy * dy;
+    const float dx = pos2.x - pos1.x;
+    const float dy = pos2.y - pos1.y;
+    const float distSq = dx * dx + dy * dy;
 
-            const float minDistance = COLLIDER_RADIUS * 2.f;
+    if (distSq < minDistanceSq && distSq > 0.0001f) {
+        const float dist = std::sqrt(distSq);
+        const float nx = dx / dist;
+        const float ny = dy / dist;
 
-            if (distanceSquared < minDistance * minDistance && distanceSquared > 0.0001f) {
-                const float distance = std::sqrt(distanceSquared);
-                const float overlap = minDistance - distance;
+        // 1. Separacja pozycji po równo (50%)
+        const float overlap = minDistance - dist;
+        const float pushX = nx * (overlap * 0.5f);
+        const float pushY = ny * (overlap * 0.5f);
 
-                const sf::Vector2f pushDirection(dx / distance, dy / distance);
-                const float repulsionFactor = 5.f;
-                const sf::Vector2f pushForce = pushDirection * overlap * repulsionFactor;
+        b1->setPosition(sf::Vector2f(pos1.x - pushX, pos1.y - pushY));
+        b2->setPosition(sf::Vector2f(pos2.x + pushX, pos2.y + pushY));
 
-                b1->addExternalForce(-pushForce);
-                b2->addExternalForce(pushForce);
-            }
-        }
+        // 2. Rozwi¹zanie prêdkoœci (v2 - v1)
+        const sf::Vector2f v1 = b1->getVelocity();
+        const sf::Vector2f v2 = b2->getVelocity();
+
+        const float dvx = v2.x - v1.x;
+        const float dvy = v2.y - v1.y;
+
+        const float vn = (dvx * nx) + (dvy * ny);
+
+        if (vn > 0.0f) return;
+
+        const float e = 1.0f;
+        const float impulse = -(1.0f + e) * vn * 0.5f;
+
+        const float impulseX = nx * impulse;
+        const float impulseY = ny * impulse;
+
+        b1->setVelocity(sf::Vector2f(v1.x - impulseX, v1.y - impulseY));
+        b2->setVelocity(sf::Vector2f(v2.x + impulseX, v2.y + impulseY));
     }
 }
 
-void GameManager::handleBuoyCollisions() {
-    const auto& buoys = track.getBouys();
-    for (auto& [id, boatPtr] : activeBoats) {
-        Boat* boat = boatPtr.get();
-        const sf::Vector2f boatPos = boat->getPosition();
+void GameManager::buoyCollision(Boat* boat, const Buoy& buoy) {
+    const float minDistance = COLLIDER_RADIUS + buoy.radius;
+    const float minDistanceSq = minDistance * minDistance;
 
-        for (const Buoy& buoy : buoys) {
-            const float dx = buoy.position.x - boatPos.x;
-            const float dy = buoy.position.y - boatPos.y;
-            const float distSq = dx * dx + dy * dy;
-            const float radius = buoy.radius;
+    const sf::Vector2f boatPos = boat->getPosition();
+    const float dx = buoy.position.x - boatPos.x;
+    const float dy = buoy.position.y - boatPos.y;
+    const float distSq = dx * dx + dy * dy;
 
-            if (distSq < radius * radius * 2 && distSq > 0.0001f) {
-                const float distance = std::sqrt(distSq);
-                const float overlap = radius - distance;
+    if (distSq < minDistanceSq && distSq > 0.0001f) {
+        const float dist = std::sqrt(distSq);
+        const float nx = dx / dist;
+        const float ny = dy / dist;
 
-                const sf::Vector2f pushDirection(dx / distance, dy / distance);
-                const float repulsionFactor = 5.f;
-                const sf::Vector2f pushForce = pushDirection * overlap * repulsionFactor;
+        // 1. Separacja pozycji (boja statyczna, 100% korekty przypada na ³ódŸ)
+        const float overlap = minDistance - dist;
+        boat->setPosition(sf::Vector2f(boatPos.x - nx * overlap, boatPos.y - ny * overlap));
 
-                boat->addExternalForce(pushForce);
-            }
-        }
+        // 2. Rozwi¹zanie prêdkoœci (v_boja - v_lodz, gdzie v_boja = 0)
+        const sf::Vector2f v = boat->getVelocity();
+        const float dvx = -v.x;
+        const float dvy = -v.y;
+
+        const float vn = (dvx * nx) + (dvy * ny);
+
+        if (vn > 0.0f) return;
+
+        // Ze wzglêdu na nieskoñczon¹ masê boi, odrzut nie jest dzielony na pó³
+        const float e = 1.0f;
+        const float impulse = -(1.0f + e) * vn;
+
+        boat->setVelocity(sf::Vector2f(v.x - nx * impulse, v.y - ny * impulse));
     }
 }
+
 
 void GameManager::handleCollisions() {
-	handleBoatCollisions();
-	handleBuoyCollisions();
+    for (auto it1 = activeBoats.begin(); it1 != activeBoats.end(); ++it1) {
+        for (auto it2 = std::next(it1); it2 != activeBoats.end(); ++it2) {
+            boatCollision(it1->second.get(), it2->second.get());
+        }
+    }
+    const auto& buoys = track.getBouys();
+    for (auto& [id, boatPtr] : activeBoats) {
+        for (const Buoy& buoy : buoys) {
+            buoyCollision(boatPtr.get(), buoy);
+        }
+    }
 }

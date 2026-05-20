@@ -23,7 +23,7 @@ sf::Vector2f getBSplinePoint(const sf::Vector2f& p0,
 }
 
 void Track::generateTrack(std::vector<sf::Vector2f> controlPoints) {
-    buoys.clear();
+    buoys.clear(); // delete for multiple bounds
 
     float separationDistance = 50.f;
 

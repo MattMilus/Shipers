@@ -321,7 +321,7 @@ int GameManager::getPlayerId() const {
     return playerId;
 }
 
-void GameManager::handleCollisions() {
+void GameManager::handleBoatCollisions() {
     for (auto it1 = activeBoats.begin(); it1 != activeBoats.end(); ++it1) {
         for (auto it2 = std::next(it1); it2 != activeBoats.end(); ++it2) {
             Boat* b1 = it1->second.get();
@@ -349,4 +349,35 @@ void GameManager::handleCollisions() {
             }
         }
     }
+}
+
+void GameManager::handleBuoyCollisions() {
+    const auto& buoys = track.getBouys();
+    for (auto& [id, boatPtr] : activeBoats) {
+        Boat* boat = boatPtr.get();
+        const sf::Vector2f boatPos = boat->getPosition();
+
+        for (const Buoy& buoy : buoys) {
+            const float dx = buoy.position.x - boatPos.x;
+            const float dy = buoy.position.y - boatPos.y;
+            const float distSq = dx * dx + dy * dy;
+            const float radius = buoy.radius;
+
+            if (distSq < radius * radius * 2 && distSq > 0.0001f) {
+                const float distance = std::sqrt(distSq);
+                const float overlap = radius - distance;
+
+                const sf::Vector2f pushDirection(dx / distance, dy / distance);
+                const float repulsionFactor = 5.f;
+                const sf::Vector2f pushForce = pushDirection * overlap * repulsionFactor;
+
+                boat->addExternalForce(pushForce);
+            }
+        }
+    }
+}
+
+void GameManager::handleCollisions() {
+	handleBoatCollisions();
+	handleBuoyCollisions();
 }

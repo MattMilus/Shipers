@@ -278,6 +278,38 @@ uint32_t game_manager_get_remaining_countdown_ms(GameState* state) {
     return remaining_ms;
 }
 
+void boatCollision(Boat* b1, Boat* b2, float distSq, float minDist, float dx, float dy) {
+    const float dist = sqrtf(distSq);
+    const float overlap = minDist - dist;
+    const float nx = dx / dist;
+    const float ny = dy / dist;
+	const float pushX = nx * (overlap * 0.5f);
+	const float pushY = ny * (overlap * 0.5f);
+	const float bounceForce = 20.0f;
+	b1->position.x -= pushX;
+	b1->position.y -= pushY;
+	b2->position.x += pushX;
+	b2->position.y += pushY;
+	b1->velocity.x -= nx * bounceForce;
+	b1->velocity.y -= ny * bounceForce;
+	b2->velocity.x += nx * bounceForce;
+	b2->velocity.y += ny * bounceForce;
+}
+
+void buoyCollision(Boat* boat, Vector2f buoyPos, float distSq, float minDist, float dx, float dy) {
+	const float dist = sqrtf(distSq);
+	const float overlap = minDist - dist;
+	const float nx = dx / dist;
+	const float ny = dy / dist;
+	const float pushX = nx * overlap;
+	const float pushY = ny * overlap;
+	boat->position.x -= pushX;
+	boat->position.y -= pushY;
+	const float bounceForce = 20.0f;
+	boat->velocity.x -= nx * bounceForce;
+	boat->velocity.y -= ny * bounceForce;
+}
+
 void game_manager_resolve_collisions(GameState* state) {
     const float minDist = 2.0f * COLLIDER_RADIUS;
     const float minDistSq = minDist * minDist;
@@ -300,23 +332,19 @@ void game_manager_resolve_collisions(GameState* state) {
             const float distSq = (dx * dx) + (dy * dy);
 
             if (distSq < minDistSq && distSq > 0.0001f) {
-                const float dist = sqrtf(distSq);
-                const float overlap = minDist - dist;
-                const float nx = dx / dist;
-                const float ny = dy / dist;
-                const float pushX = nx * (overlap * 0.5f);
-                const float pushY = ny * (overlap * 0.5f);
-                const float bounceForce = 20.0f;
+                boatCollision(b1, b2, distSq, minDist, dx, dy);
+            }
+        }
 
-                b1->position.x -= pushX;
-                b1->position.y -= pushY;
-                b2->position.x += pushX;
-                b2->position.y += pushY;
-
-                b1->velocity.x -= nx * bounceForce;
-                b1->velocity.y -= ny * bounceForce;
-                b2->velocity.x += nx * bounceForce;
-                b2->velocity.y += ny * bounceForce;
+        for (int j = 0; j < track_buoy_count; j++) {
+            const Vector2f buoyPos = track_buoys[j].position;
+            const float dx = buoyPos.x - state->players[i].boat.position.x;
+            const float dy = buoyPos.y - state->players[i].boat.position.y;
+            
+			const float radius = track_buoys[j].radius;
+            const float distSq = (dx * dx) + (dy * dy);
+            if (distSq < radius * radius * 2 && distSq > 0.0001f) {
+                buoyCollision(&state->players[i].boat, buoyPos, distSq, minDist, dx, dy);
             }
         }
     }

@@ -47,6 +47,9 @@ private:
     int addPlayer(int id, sf::Vector2f startPos);
     static sf::Vector2f raceSpawnForId(int id);
 
+	void handleBoatCollisions();
+	void handleBuoyCollisions();
+
 public:
     GameManager();
 

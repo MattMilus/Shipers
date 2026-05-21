@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "../../ServerPackets.h"
+#include "ConnectionManager.h"
 
 namespace {
 constexpr float LOCAL_POSITION_CORRECTION_DISTANCE = 8.0f;
@@ -16,19 +17,6 @@ constexpr float LOCAL_VELOCITY_CORRECTION_FACTOR = 0.25f;
 constexpr float LOCAL_ANGLE_CORRECTION_DEGREES = 3.0f;
 constexpr float LOCAL_ANGLE_SNAP_DEGREES = 45.0f;
 constexpr float LOCAL_ANGLE_CORRECTION_FACTOR = 0.25f;
-
-void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobbyPacket) {
-    gameManager->clearLobbyPlayers();
-
-    for (int i = 0; i < lobbyPacket.active_players_count; ++i) {
-        const LobbyPlayerSnapshot& playerSnapshot = lobbyPacket.players[i];
-        gameManager->upsertLobbyPlayer(playerSnapshot.player_id, playerSnapshot.nickname);
-
-        if (playerSnapshot.is_ready != 0) {
-            gameManager->markPlayerReady(playerSnapshot.player_id);
-        }
-    }
-}
 
 float lengthSquared(const sf::Vector2f& vector) {
     return (vector.x * vector.x) + (vector.y * vector.y);
@@ -167,7 +155,7 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
 
             PacketAckJoinLobby lobbyPacket{};
             std::memcpy(&lobbyPacket, buffer, sizeof(PacketAckJoinLobby));
-            loadLobbySnapshot(gameManager, lobbyPacket);
+            ConnectionManager::loadLobbySnapshot(gameManager, lobbyPacket);
             break;
         }
         case MSG_NEW_PLAYER_JOIN: {

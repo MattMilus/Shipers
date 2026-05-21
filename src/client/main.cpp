@@ -77,6 +77,7 @@ int main() {
     sf::Clock globalClock;
     sf::Clock deltaClock;
     sf::Clock networkClock;
+    sf::Clock keepAliveClock;
 
     TextField serverIpField;
     serverIpField.setLabel("Server IP");
@@ -311,8 +312,8 @@ int main() {
             window.setMouseCursor(*textCursor);
         } else if (regCursor) {
             window.setMouseCursor(*regCursor);
-     
-        }
+		}
+		
 
         if (sf::UdpSocket* socket = gameManager->getUdpSocket()) {
             char buffer[2048];
@@ -363,6 +364,14 @@ int main() {
         if (networkClock.getElapsedTime().asSeconds() >= NETWORK_TICK_RATE && gameManager->shouldSendMoves()) {
             StateManager::sendMoveInformation(gameManager);
             networkClock.restart();
+        }
+
+        if (gameManager->isConnectedToServer() &&
+            (gameManager->getSessionPhase() == SessionPhase::Lobby || gameManager->getSessionPhase() == SessionPhase::Countdown)) {
+            if (keepAliveClock.getElapsedTime().asSeconds() >= 1.0f) {
+                StateManager::sendIAmAlive(gameManager);
+                keepAliveClock.restart();
+            }
         }
 
         updateActionButton(actionButton, *gameManager);

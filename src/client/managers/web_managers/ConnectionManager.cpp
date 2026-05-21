@@ -9,7 +9,6 @@
 #include <optional>
 #include <string>
 
-#include "../../ServerPackets.h"
 #include "../GameManager.h"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/Socket.hpp"
@@ -18,8 +17,7 @@
 
 #include "../../env.h"
 
-namespace {
-void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobbyPacket) {
+void ConnectionManager::loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobbyPacket) {
     gameManager->clearLobbyPlayers();
 
     for (int i = 0; i < lobbyPacket.active_players_count; ++i) {
@@ -30,7 +28,6 @@ void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobby
             gameManager->markPlayerReady(playerSnapshot.player_id);
         }
     }
-}
 }
 
 int ConnectionManager::connectToServer(GameManager* gameManager,

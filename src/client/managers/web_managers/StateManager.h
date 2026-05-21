@@ -11,6 +11,7 @@ class StateManager {
 public:
     static void sendReady(GameManager* gameManager);
     static void sendMoveInformation(GameManager* gameManager);
+    static void sendIAmAlive(GameManager* gameManager);
 };
 
 

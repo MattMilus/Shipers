@@ -78,21 +78,32 @@ void Renderer::renderBackground(float time) {
     const auto& boats = gameManager->getActiveBoats();
     const int boatCount = static_cast<int>(boats.size());
     
-	if (boatCount > 0) {
+    if (boatCount > 0) {
         const int playerID = gameManager->getPlayerId();
-		for (int i = 0; i < boatCount; ++i) {
-			const auto& boat = boats.at((playerID + i) % boatCount);
-			sf::Vector2f pos = boat->getPosition();
-            uPathHistory[i] = sf::Glsl::Vec2(pos.x / 800.f, pos.y / 600.f);
-		}
+        int currentIndex = 1;
+
+        Boat* localBoat = gameManager->getBoatById(playerID);
+        if (localBoat != nullptr) {
+            sf::Vector2f pos = localBoat->getPosition();
+            uPathHistory[0] = sf::Glsl::Vec2(pos.x / 800.f, pos.y / 600.f);
+        } else {
+            currentIndex = 0;
+        }
+
+        for (const auto& [id, boat] : boats) {
+            if (id == playerID && localBoat != nullptr) {
+                continue;
+            }
+
+            sf::Vector2f pos = boat->getPosition();
+            uPathHistory[currentIndex] = sf::Glsl::Vec2(pos.x / 800.f, pos.y / 600.f);
+            currentIndex++;
+        }
 
         for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i >= boatCount; --i) {
             uPathHistory[i] = uPathHistory[i - boatCount];
         }
-	}
-    
-
-    
+    }
 
     renderTex.clear();
     renderTex.draw(screenQuad, &checkerShader);

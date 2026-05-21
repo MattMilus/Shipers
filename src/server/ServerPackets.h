@@ -22,7 +22,9 @@ enum {
     MSG_RETURN_TO_LOBBY = 14,
     MSG_GAME_START = 100,
     MSG_GAME_STATE = 101,
-    MSG_MOVE = 102
+    MSG_MOVE = 102,
+
+    MSG_I_AM_ALIVE = 999
 };
 
 typedef struct {
@@ -130,6 +132,11 @@ typedef struct {
     int active_players_count;
     PlayerSnapshot players[4];
 } PacketGameState;
+
+typedef struct {
+    MessageType type;
+    int player_id;
+} PacketIAmAlive;
 
 #pragma pack(pop)
 

@@ -63,3 +63,20 @@ void StateManager::sendMoveInformation(GameManager *gameManager) {
         }
     }
 }
+
+void StateManager::sendIAmAlive(GameManager *gameManager) {
+    PacketIAmAlive packet;
+    packet.type = MSG_I_AM_ALIVE;
+    packet.player_id = gameManager->getPlayerId();
+
+    const sf::Socket::Status status = gameManager->getUdpSocket()->send(
+        &packet,
+        sizeof(packet),
+        gameManager->getServerIpAddress(),
+        ENV_SERVER_PORT
+    );
+
+    if (status != sf::Socket::Status::Done) {
+        std::cerr << "Error while sending IAmAlive packet.\n";
+    }
+}

@@ -39,6 +39,11 @@ void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *cl
             player_disconnect(buffer, sock, client_addr, gameState);
             break;
         }
+        case MSG_I_AM_ALIVE: {
+            fprintf(stderr, "Received message I_AM_ALIVE\n");
+            player_heartbeat(buffer, sock, client_addr, gameState);
+            break;
+        }
 
 
         default:

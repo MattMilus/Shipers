@@ -4,6 +4,7 @@
 
 #include "Renderer.h"
 
+#include <cmath>
 #include <iostream>
 #include <SFML/Graphics/CircleShape.hpp>
 #include "Terminal.h"
@@ -92,9 +93,10 @@ void Renderer::renderBackground(float time) {
         }
     }
 
-    const auto& bouys = gameManager->getTrack().getBouys();
-    for (int i = 0; i < bouys.size() - 1; ++i) {
-        uPathHistory[i + BOAT_U_PATH_HISTORY_SIZE] = bouys[i].position;
+    const auto& buoys = gameManager->getTrack().getBuoys();
+
+    for (int i = 0; i < buoys.size(); ++i) {
+        uPathHistory[i + BOAT_U_PATH_HISTORY_SIZE] = buoys[i].position;
     }
 
     renderTex.clear();
@@ -107,6 +109,44 @@ void Renderer::renderBackground(float time) {
 
     window.clear();
     window.draw(screenQuad, &waveShader);
+
+    renderFinish();
+}
+
+
+void Renderer::renderFinish() {
+    sf::Vector2f finishPos = gameManager->getTrack().getFinishBuoy().position;
+    float finishRadius = gameManager->getTrack().getFinishRadius();
+
+    Player* localPlayer = gameManager->getPlayer();
+    if (localPlayer == nullptr) {
+        return;
+    }
+
+    sf::Vector2f screenFinishPos = finishPos - localPlayer->getPosition() + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
+
+    int segments = 40;
+    sf::VertexArray dashedCircle(sf::PrimitiveType::Lines);
+
+    for (int i = 0; i < segments; i += 2) {
+        float angle1 = i * (2.0f * 3.14159f) / segments;
+        float angle2 = (i + 1) * (2.0f * 3.14159f) / segments;
+
+        sf::Vector2f p1 = screenFinishPos + sf::Vector2f(std::cos(angle1) * finishRadius, std::sin(angle1) * finishRadius);
+        sf::Vector2f p2 = screenFinishPos + sf::Vector2f(std::cos(angle2) * finishRadius, std::sin(angle2) * finishRadius);
+
+        dashedCircle.append(sf::Vertex{p1, sf::Color::Black});
+        dashedCircle.append(sf::Vertex{p2, sf::Color::Black});
+    }
+    window.draw(dashedCircle);
+
+    float buoyVisualRadius = 25.f;
+    sf::CircleShape finishBuoyShape(buoyVisualRadius);
+    finishBuoyShape.setFillColor(sf::Color::Black);
+    finishBuoyShape.setOrigin({buoyVisualRadius, buoyVisualRadius});
+    finishBuoyShape.setPosition(screenFinishPos);
+
+    window.draw(finishBuoyShape);
 }
 
 void Renderer::renderTrack(float time) {
@@ -114,24 +154,24 @@ void Renderer::renderTrack(float time) {
         return;
     }
 
-	const std::vector<Bouy>& bouys = gameManager->getTrack().getBouys();
+	const std::vector<Buoy>& buoys = gameManager->getTrack().getBuoys();
 
 	const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
 	
-	sf::CircleShape bouyShape;
-	bouyShape.setOrigin({ 25.f, 25.f });
-	bouyShape.setFillColor(sf::Color::Yellow);
-	bouyShape.setOutlineThickness(3.f);
-	bouyShape.setOutlineColor(sf::Color::Black);
-	float bouyRadiusOffset = 0.0f;
-	for (const Bouy& bouy : bouys) {
-        bouyShape.setRadius(bouy.radius * (0.75 + sin(time + bouyRadiusOffset) * 0.25));
-		bouyRadiusOffset += 0.15f;
-		bouyShape.setPosition(
-			bouy.position - cameraPosition
+	sf::CircleShape buoyShape;
+	buoyShape.setOrigin({ 25.f, 25.f });
+	buoyShape.setFillColor(sf::Color::Yellow);
+	buoyShape.setOutlineThickness(3.f);
+	buoyShape.setOutlineColor(sf::Color::Black);
+	float buoyRadiusOffset = 0.0f;
+	for (const Buoy& buoy : buoys) {
+        buoyShape.setRadius(buoy.radius * (0.75 + sin(time + buoyRadiusOffset) * 0.25));
+		buoyRadiusOffset += 0.15f;
+		buoyShape.setPosition(
+			buoy.position - cameraPosition
 			+ sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
 		);
-		window.draw(bouyShape);
+		window.draw(buoyShape);
 	}
 }
 

@@ -19,8 +19,8 @@
 #include "Panel.h"
 
 #define BOAT_U_PATH_HISTORY_SIZE 256
-#define BOUY_U_PATH_HISTORY_SIZE 256
-#define TOTAL_HISTORY_SIZE (BOAT_U_PATH_HISTORY_SIZE + BOUY_U_PATH_HISTORY_SIZE)
+#define BUOY_U_PATH_HISTORY_SIZE 256
+#define TOTAL_HISTORY_SIZE (BOAT_U_PATH_HISTORY_SIZE + BUOY_U_PATH_HISTORY_SIZE)
 
 
 
@@ -50,6 +50,7 @@ protected:
     void renderBackground(float time);
     void renderBoats();
     void renderTrack(float time);
+    void renderFinish();
 public:
     Renderer(GameManager* game_manager);
 

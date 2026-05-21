@@ -289,8 +289,9 @@ void GameManager::removeBoat(const int id) {
     activeBoats.erase(id);
 }
 
-void GameManager::generateTrack(std::vector<sf::Vector2f> controlPoints) {
-	track.generateTrack(controlPoints);
+void GameManager::generateTrack(std::vector<sf::Vector2f> controlPoints, sf::Vector2f finishPos) {
+	track.generateTrack(std::move(controlPoints));
+    track.setFinish(finishPos);
 }
 
 const Track& GameManager::getTrack() const {

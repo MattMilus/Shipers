@@ -252,7 +252,8 @@ int main() {
         }
     });
 
-    gameManager->generateTrack({ {0.0f, 0.0f}, {300.0f, 700.0f}, {1000.0f, 1000.0f} });
+    gameManager->generateTrack({ {0.0f, 0.0f}, {300.0f, 700.0f}, {1000.0f, 1000.0f} },
+        {1200.0f, 1200.f});
 
     while (window.isOpen()) {
         const float time = globalClock.getElapsedTime().asSeconds();

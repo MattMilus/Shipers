@@ -74,7 +74,8 @@ else()
             src/client/managers/web_managers/PacketHandler.h
             src/client/ServerPackets.h
             src/client/entities/Track.h
-            src/client/entities/Track.cpp)
+            src/client/entities/Track.cpp
+            src/client/managers/EndGameScoreboard.cpp)
 
     if(MINGW)
         target_link_options(ShipersClient PRIVATE -static -static-libgcc -static-libstdc++)

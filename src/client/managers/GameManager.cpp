@@ -207,6 +207,10 @@ SessionPhase GameManager::getSessionPhase() const {
     return sessionPhase;
 }
 
+void GameManager::setSessionPhase(SessionPhase newSessionPhase) {
+    sessionPhase = newSessionPhase;
+}
+
 float GameManager::getCountdownSecondsLeft() const {
     if (sessionPhase != SessionPhase::Countdown) {
         return 0.0f;
@@ -338,7 +342,7 @@ void GameManager::boatCollision(Boat* b1, Boat* b2) {
         const float nx = dx / dist;
         const float ny = dy / dist;
 
-        // 1. Separacja pozycji po równo (50%)
+        // 1. Separacja pozycji po rï¿½wno (50%)
         const float overlap = minDistance - dist;
         const float pushX = nx * (overlap * 0.5f);
         const float pushY = ny * (overlap * 0.5f);
@@ -346,7 +350,7 @@ void GameManager::boatCollision(Boat* b1, Boat* b2) {
         b1->setPosition(sf::Vector2f(pos1.x - pushX, pos1.y - pushY));
         b2->setPosition(sf::Vector2f(pos2.x + pushX, pos2.y + pushY));
 
-        // 2. Rozwi¹zanie prêdkoœci (v2 - v1)
+        // 2. Rozwiï¿½zanie prï¿½dkoï¿½ci (v2 - v1)
         const sf::Vector2f v1 = b1->getVelocity();
         const sf::Vector2f v2 = b2->getVelocity();
 
@@ -382,11 +386,11 @@ void GameManager::buoyCollision(Boat* boat, const Buoy& buoy) {
         const float nx = dx / dist;
         const float ny = dy / dist;
 
-        // 1. Separacja pozycji (boja statyczna, 100% korekty przypada na ³ódŸ)
+        // 1. Separacja pozycji (boja statyczna, 100% korekty przypada na ï¿½ï¿½dï¿½)
         const float overlap = minDistance - dist;
         boat->setPosition(sf::Vector2f(boatPos.x - nx * overlap, boatPos.y - ny * overlap));
 
-        // 2. Rozwi¹zanie prêdkoœci (v_boja - v_lodz, gdzie v_boja = 0)
+        // 2. Rozwiï¿½zanie prï¿½dkoï¿½ci (v_boja - v_lodz, gdzie v_boja = 0)
         const sf::Vector2f v = boat->getVelocity();
         const float dvx = -v.x;
         const float dvy = -v.y;
@@ -395,7 +399,7 @@ void GameManager::buoyCollision(Boat* boat, const Buoy& buoy) {
 
         if (vn > 0.0f) return;
 
-        // Ze wzglêdu na nieskoñczon¹ masê boi, odrzut nie jest dzielony na pó³
+        // Ze wzglï¿½du na nieskoï¿½czonï¿½ masï¿½ boi, odrzut nie jest dzielony na pï¿½
         const float e = 1.0f;
         const float impulse = -(1.0f + e) * vn;
 
@@ -410,7 +414,7 @@ void GameManager::handleCollisions() {
             boatCollision(it1->second.get(), it2->second.get());
         }
     }
-    const auto& buoys = track.getBouys();
+    const auto& buoys = track.getBuoys();
     for (auto& [id, boatPtr] : activeBoats) {
         for (const Buoy& buoy : buoys) {
             buoyCollision(boatPtr.get(), buoy);

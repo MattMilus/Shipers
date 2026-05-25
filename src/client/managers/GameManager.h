@@ -22,7 +22,8 @@
 enum class SessionPhase {
     Lobby,
     Countdown,
-    Race
+    Race,
+    EndGame
 };
 
 struct LobbyPlayerInfo {
@@ -68,6 +69,7 @@ public:
     void setNickname(std::string newNickname);
     const std::string& getNickname() const;
     SessionPhase getSessionPhase() const;
+    void setSessionPhase(SessionPhase newSessionPhase);
     float getCountdownSecondsLeft() const;
     bool isConnectedToServer() const;
     void setPlayerId(int id);

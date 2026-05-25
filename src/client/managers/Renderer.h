@@ -32,7 +32,7 @@ private:
     sf::Glsl::Vec2 resolution;
 
 
-    sf::Glsl::Vec2 uPathHistory[BOAT_U_PATH_HISTORY_SIZE];
+    sf::Glsl::Vec2 uPathHistory[TOTAL_HISTORY_SIZE];
     sf::Shader checkerShader;
     sf::Shader waveShader;
     sf::Texture boatTexture;

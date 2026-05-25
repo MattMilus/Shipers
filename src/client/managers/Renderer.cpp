@@ -79,7 +79,7 @@ sf::RenderWindow* Renderer::initialize() {
 void Renderer::renderBackground(float time) {
     const auto& boats = gameManager->getActiveBoats();
     const int boatCount = static_cast<int>(boats.size());
-    
+
     if (boatCount > 0) {
         const int playerID = gameManager->getPlayerId();
         int currentIndex = 1;

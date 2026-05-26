@@ -38,7 +38,7 @@ else()
     # 2. Client
     # --------------------------------------------------------
     message(STATUS "--- Kompilacja na WINDOWS / MAC ---")
-    message(STATUS "Pobieranie SFML i budowanie Klienta w C++.")
+    message(STATUS "Pobieranie SFML i budowanie Klienta oraz Edytora w C++.")
 
     include(FetchContent)
     set(BUILD_SHARED_LIBS OFF)
@@ -91,10 +91,27 @@ else()
     )
 
     add_custom_target(CopyShipersAssets
-        COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/src/client/assets" "${CMAKE_CURRENT_BINARY_DIR}/assets"
-        COMMENT "Wymuszone kopiowanie assets..."
+            COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/src/client/assets" "${CMAKE_CURRENT_BINARY_DIR}/assets"
+            COMMENT "Wymuszone kopiowanie assets..."
     )
-    
+
     add_dependencies(ShipersClient CopyShipersAssets)
+
+    # --------------------------------------------------------
+    # 3. Track Editor
+    # --------------------------------------------------------
+    add_executable(TrackEditor
+            src/tools/TrackEditor.cpp
+    )
+
+    if(MINGW)
+        target_link_options(TrackEditor PRIVATE -static -static-libgcc -static-libstdc++)
+    endif()
+
+    target_link_libraries(TrackEditor PRIVATE
+            SFML::Graphics
+            SFML::Window
+            SFML::System
+    )
 endif()

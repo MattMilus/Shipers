@@ -6,9 +6,12 @@
 #define SHIPERS_CONNECTIONMANAGER_H
 
 #include "../GameManager.h"
+#include "../../ServerPackets.h"
+
 
 class ConnectionManager {
 public:
+    static void loadLobbySnapshot(GameManager* gameManager, const PacketAckJoinLobby& lobbyPacket);
     static int connectToServer(GameManager* game_manager, const std::string& serverIp);
     static int joinLobby(GameManager* gameManager, const std::string& nickname);
     static int disconnectFromServer(GameManager* game_manager);

@@ -179,6 +179,12 @@ void player_disconnect(char* buffer, const int sock, struct sockaddr_in *client_
     }
 }
 
+void player_heartbeat(char* buffer, const int sock, struct sockaddr_in *client_addr, GameState *gameState) {
+    PacketIAmAlive *packet = (PacketIAmAlive *)buffer;
+    gameState->players[packet->player_id].isActive = true;
+    gameState->players[packet->player_id].lastActivityTime = time(NULL);
+}
+
 void* timeout_checker(void* arg) {
     GameState* state = (GameState*)arg;
 

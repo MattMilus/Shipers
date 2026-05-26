@@ -71,7 +71,7 @@ int main() {
 
     auto regCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
     auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
-	auto textCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Text);
+    auto textCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Text);
 
     sf::Font uiFont("assets/fonts/Arial.ttf");
     sf::Clock globalClock;
@@ -253,6 +253,9 @@ int main() {
         }
     });
 
+    gameManager->generateTrack({ {0.0f, 0.0f}, {300.0f, 700.0f}, {1000.0f, 1000.0f} });
+    gameManager->generateTrack({ { 250.0f, -25.0f }, { 550.0f, 675.0f }, { 1250.0f, 975.0f } });
+
     while (window.isOpen()) {
         const float time = globalClock.getElapsedTime().asSeconds();
         const float deltaTime = deltaClock.restart().asSeconds();
@@ -309,8 +312,8 @@ int main() {
             window.setMouseCursor(*textCursor);
         } else if (regCursor) {
             window.setMouseCursor(*regCursor);
-		}
-		
+     
+        }
 
         if (sf::UdpSocket* socket = gameManager->getUdpSocket()) {
             char buffer[2048];

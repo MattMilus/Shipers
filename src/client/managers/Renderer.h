@@ -19,6 +19,8 @@
 #include "Panel.h"
 
 #define BOAT_U_PATH_HISTORY_SIZE 256
+#define BOUY_U_PATH_HISTORY_SIZE 256
+#define TOTAL_HISTORY_SIZE (BOAT_U_PATH_HISTORY_SIZE + BOUY_U_PATH_HISTORY_SIZE)
 
 
 
@@ -30,7 +32,7 @@ private:
     sf::Glsl::Vec2 resolution;
 
 
-    sf::Glsl::Vec2 uPathHistory[BOAT_U_PATH_HISTORY_SIZE];
+    sf::Glsl::Vec2 uPathHistory[TOTAL_HISTORY_SIZE];
     sf::Shader checkerShader;
     sf::Shader waveShader;
     sf::Texture boatTexture;
@@ -47,6 +49,7 @@ private:
 protected:
     void renderBackground(float time);
     void renderBoats();
+    void renderTrack(float time);
 public:
     Renderer(GameManager* game_manager);
 

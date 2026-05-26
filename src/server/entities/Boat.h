@@ -32,6 +32,10 @@ typedef struct {
 
     float drag_forward;
     float drag_lateral;
+
+    int points;
+    float raceTime;
+    int finishedInfoSent;
 } Boat;
 
 void boat_init(Boat* boat, Vector2f start_pos);

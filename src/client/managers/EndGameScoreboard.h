@@ -12,7 +12,7 @@
 #include <functional>
 
 struct PlayerScore {
-    uint32_t id;
+    int id;
     std::string nickname;
     bool isFinished;
     float finishTime;

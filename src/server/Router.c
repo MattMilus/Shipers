@@ -15,12 +15,12 @@ void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *cl
 
     switch (header->type) {
         case MSG_CONNECT: {
-            fprintf(stderr, "Received message CONNECT\n");
+            //fprintf(stderr, "Received message CONNECT\n");
             accept_connection(buffer, sock, client_addr, gameState);
             break;
         }
         case MSG_JOIN_LOBBY: {
-            fprintf(stderr, "Received message JOIN_LOBBY\n");
+            //fprintf(stderr, "Received message JOIN_LOBBY\n");
             player_join_lobby(buffer, sock, client_addr, gameState);
             break;
         }
@@ -30,17 +30,17 @@ void route_message(char *buffer, int read_size, int sock, struct sockaddr_in *cl
             break;
         }
         case MSG_PLAYER_READY: {
-            fprintf(stderr, "Received message PLAYER_READY\n");
+            //fprintf(stderr, "Received message PLAYER_READY\n");
             player_ready(buffer, sock, client_addr, gameState);
             break;
         }
         case MSG_DISCONNECT: {
-            fprintf(stderr, "Received message DISCONNECT\n");
+            //fprintf(stderr, "Received message DISCONNECT\n");
             player_disconnect(buffer, sock, client_addr, gameState);
             break;
         }
         case MSG_I_AM_ALIVE: {
-            fprintf(stderr, "Received message I_AM_ALIVE\n");
+            //fprintf(stderr, "Received message I_AM_ALIVE\n");
             player_heartbeat(buffer, sock, client_addr, gameState);
             break;
         }

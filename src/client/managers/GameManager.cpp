@@ -327,6 +327,8 @@ int GameManager::getPlayerId() const {
 }
 
 void GameManager::boatCollision(Boat* b1, Boat* b2) {
+    if (b1->isFinished() || b2->isFinished()) return;
+
     const float minDistance = COLLIDER_RADIUS * 2.f;
     const float minDistanceSq = minDistance * minDistance;
 
@@ -420,4 +422,12 @@ void GameManager::handleCollisions() {
             buoyCollision(boatPtr.get(), buoy);
         }
     }
+}
+
+void GameManager::localPlayerFinished() {
+    this->sessionPhase = SessionPhase::EndGame;
+}
+
+void GameManager::setPlayerTime(int id, float time) const {
+    this->getBoatById(id)->setRaceTime(time);
 }

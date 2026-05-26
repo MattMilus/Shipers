@@ -91,6 +91,8 @@ public:
     [[nodiscard]] const std::map<int, std::unique_ptr<Boat>>& getActiveBoats() const;
     [[nodiscard]] Boat* getBoatById(int id) const;
     [[nodiscard]] Player* getPlayer() const;
+    void localPlayerFinished();
+    void setPlayerTime(int id, float time) const;
 
     int getPlayerId() const;
 };

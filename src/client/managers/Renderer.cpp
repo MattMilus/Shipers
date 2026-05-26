@@ -96,6 +96,7 @@ void Renderer::renderBackground(float time) {
             if (id == playerID && localBoat != nullptr) {
                 continue;
             }
+            if (boat->isFinished()) continue;
 
             sf::Vector2f pos = boat->getPosition();
             uPathHistory[currentIndex] = sf::Glsl::Vec2(pos.x / 800.f, pos.y / 600.f);
@@ -201,6 +202,8 @@ void Renderer::renderBoats() {
 
     // Rendering boats
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
+        if (boat->isFinished()) continue;
+
         boatSprite.setPosition(
             boat->getPosition() - localPlayer->getPosition()
             + sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
@@ -237,6 +240,7 @@ void Renderer::debug() {
     sf::CircleShape colliderCircle(COLLIDER_RADIUS);
 
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
+        if (boat->isFinished()) continue;
         colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
         colliderCircle.setPosition(
             boat->getPosition() - localPlayer->getPosition()

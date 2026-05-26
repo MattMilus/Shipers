@@ -5,6 +5,7 @@
 Buoy* track_buoys = NULL;
 size_t track_buoy_count = 0;
 static size_t track_capacity = 0;
+FinishBuoy track_finish_buoy;
 
 static void push_buoy(Vector2f pos) {
     if (track_buoy_count >= track_capacity) {
@@ -32,7 +33,7 @@ static Vector2f get_bspline_point(Vector2f p0, Vector2f p1, Vector2f p2, Vector2
     return result;
 }
 
-void track_generate(const Vector2f* control_points, size_t count) {
+void track_generate(const Vector2f* control_points, size_t count, const Vector2f finish_buoy_pos) {
     if (count == 0) return;
 
     track_buoy_count = 0; // delete for multiple bounds
@@ -76,6 +77,10 @@ void track_generate(const Vector2f* control_points, size_t count) {
     }
 
     free(padded_points);
+
+    track_finish_buoy.buoy.position = finish_buoy_pos;
+    track_finish_buoy.buoy.radius = 25.0f;
+    track_finish_buoy.finish_radius = DEFAULT_FINISH_RADIUS;
 }
 
 void track_cleanup(void) {
@@ -83,4 +88,19 @@ void track_cleanup(void) {
     track_buoys = NULL;
     track_buoy_count = 0;
     track_capacity = 0;
+}
+
+int isBoatFinished(const Vector2f boat_position, const FinishBuoy* finish_buoy) {
+    if (finish_buoy == NULL) {
+        return 0;
+    }
+
+    const float dx = boat_position.x - finish_buoy->buoy.position.x;
+    const float dy = boat_position.y - finish_buoy->buoy.position.y;
+
+    const float distance_squared = (dx * dx) + (dy * dy);
+
+    const float radius_squared = finish_buoy->finish_radius * finish_buoy->finish_radius;
+
+    return distance_squared <= radius_squared;
 }

@@ -128,6 +128,7 @@ int main() {
         [&]() { window.close(); },
         [&]() {
             gameManager->resetConnection();
+            gameManager->clearLobbyPlayers();
             gameManager->connectToServer(serverIpField.getValue(), nicknameField.getValue());
         }
     );
@@ -376,6 +377,7 @@ int main() {
         }
 
         for (auto& [id, boat] : gameManager->getActiveBoats()) {
+            if (boat->isFinished()) continue;
             if (id == gameManager->getPlayerId()) {
                 if (gameManager->getSessionPhase() == SessionPhase::Race) {
                     boat->updateLocal(deltaTime);
@@ -395,18 +397,31 @@ int main() {
         }
 
         if (gameManager->isConnectedToServer() &&
-            (gameManager->getSessionPhase() == SessionPhase::Lobby || gameManager->getSessionPhase() == SessionPhase::Countdown)) {
+            (gameManager->getSessionPhase() == SessionPhase::Lobby || gameManager->getSessionPhase() == SessionPhase::Countdown ||
+                gameManager->getSessionPhase() == SessionPhase::EndGame)) {
             if (keepAliveClock.getElapsedTime().asSeconds() >= 1.0f) {
                 StateManager::sendIAmAlive(gameManager);
                 keepAliveClock.restart();
             }
         }
 
-        // @Todo: Remove it after implementing real race finish
-        scoreboard.updateScores(std::vector<PlayerScore>{
-            PlayerScore{ 1, "Test", true, 127.857f, 105, 1105 },
-            PlayerScore{ 2, "Test2", false, -1.0f, 110, 180 }
-        });
+        /**
+         * Updating scores
+         */
+        std::vector<PlayerScore> scores;
+        for (auto& [id, boat] : gameManager->getActiveBoats()) {
+            scores.push_back(
+                PlayerScore{
+                    id,
+                    gameManager->getLobbyPlayers().at(id).nickname,
+                    boat->isFinished(),
+                    boat->getRaceTime(),
+                    boat->getPoints(), // @Todo: Implement coins functionality
+                    boat->getPoints()
+                }
+            );
+        }
+        scoreboard.updateScores(scores);
 
         updateActionButton(actionButton, *gameManager);
         renderer->render(time);

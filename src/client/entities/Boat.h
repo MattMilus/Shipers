@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/System/Vector2.hpp>
 
@@ -36,6 +37,10 @@ protected:
     float dragForward;
     float dragLateral;
 
+    int points;
+    float raceTime;
+    bool finished;
+
 public:
     explicit Boat(sf::Vector2f startPos);
     virtual ~Boat() = default;
@@ -62,6 +67,16 @@ public:
     void setTargetVelocity(sf::Vector2f newVelocity);
     [[nodiscard]] float getSpeed() const;
     [[nodiscard]] float getThrottle() const;
+
+    void setPoints(int newPoints);
+    void addPoints(int newPoints);
+    [[nodiscard]] int getPoints() const;
+
+    void setFinished(bool newFinished);
+    bool isFinished() const;
+
+    void setRaceTime(float newRaceTime);
+    [[nodiscard]] float getRaceTime() const;
 };
 
 #endif //BOAT_H

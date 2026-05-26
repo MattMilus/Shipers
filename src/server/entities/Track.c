@@ -33,10 +33,10 @@ static Vector2f get_bspline_point(Vector2f p0, Vector2f p1, Vector2f p2, Vector2
     return result;
 }
 
-void track_generate(const Vector2f* control_points, size_t count, const Vector2f finish_buoy_pos) {
+void track_generate(const Vector2f* control_points, size_t count) {
     if (count == 0) return;
 
-    track_buoy_count = 0; // delete for multiple bounds
+    //track_buoy_count = 0; // delete for multiple bounds
 
     const float separation_distance = 50.0f;
     const int segments_per_curve = 20;
@@ -77,7 +77,9 @@ void track_generate(const Vector2f* control_points, size_t count, const Vector2f
     }
 
     free(padded_points);
+}
 
+void track_set_finish(const Vector2f finish_buoy_pos) {
     track_finish_buoy.buoy.position = finish_buoy_pos;
     track_finish_buoy.buoy.radius = 25.0f;
     track_finish_buoy.finish_radius = DEFAULT_FINISH_RADIUS;

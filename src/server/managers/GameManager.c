@@ -29,6 +29,9 @@ static void write_player_nickname(char* destination, const size_t destination_si
 
 static void reset_player_to_lobby(Player* player) {
     player->isReady = 0;
+    player->isFinished = 0;
+    player->boat.finishedInfoSent = 0;
+
     player->boat.velocity = (Vector2f){0.0f, 0.0f};
     player->boat.rotation = 0.0f;
     player->boat.throttle = 0.0f;
@@ -63,8 +66,15 @@ static void schedule_game_start_locked(GameState* state) {
     state->phase = GAME_PHASE_COUNTDOWN;
     state->scheduled_start_ms = now_ms() + GAME_START_COUNTDOWN_MS;
 
+    state->player_finished_count = 0;
+    state->winner_time = 0;
+    state->race_start_ms = 0;
+
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (state->players[i].isActive) {
+            state->players[i].isFinished = 0;
+            state->players[i].boat.finishedInfoSent = 0;
+
             move_player_to_race_start(&state->players[i], i);
         }
     }
@@ -92,13 +102,21 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
         memset(&state->players[i].client_addr, 0, sizeof(state->players[i].client_addr));
     }
 
-    const Vector2f control_points[] = {
+    const Vector2f control_points1[] = {
     {0.0f, 0.0f},
     {300.0f, 700.0f},
     {1000.0f, 1000.0f}
     };
+    track_generate(control_points1, 3);
+    const Vector2f control_points2[] = {
+    {250.0f, -25.0f},
+    {550.0f, 675.0f},
+    {1250.0f, 975.0f}
+    };
+    track_generate(control_points2, 3);
+
     const Vector2f finish_pos = {1200.0f, 1200.0f};
-    track_generate(control_points, 3, finish_pos);
+    track_set_finish(finish_pos);
 }
 
 int game_manager_add_player(GameState* state, struct sockaddr_in* client_addr, const char* nickname) {
@@ -365,7 +383,7 @@ void game_manager_resolve_collisions(GameState* state) {
 
         for (int j = i + 1; j < MAX_PLAYERS; j++) {
             if (!state->players[j].isActive) continue;
-            if (state->players[i].isFinished) continue;
+            if (state->players[j].isFinished) continue;
 
             boatCollision(&state->players[i].boat, &state->players[j].boat);
         }

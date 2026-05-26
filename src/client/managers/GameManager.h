@@ -86,7 +86,8 @@ public:
     int addBoat(int id, sf::Vector2f startPos);
     bool hasBoat(int id);
     void removeBoat(int id);
-	void generateTrack(std::vector<sf::Vector2f> controlPoints, sf::Vector2f finishPos);
+	void generateTrack(std::vector<sf::Vector2f> controlPoints);
+    void addFinish(sf::Vector2f finishPos);
 	[[nodiscard]] const Track& getTrack() const;
     [[nodiscard]] const std::map<int, std::unique_ptr<Boat>>& getActiveBoats() const;
     [[nodiscard]] Boat* getBoatById(int id) const;

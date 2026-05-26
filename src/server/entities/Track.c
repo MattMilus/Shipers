@@ -1,4 +1,4 @@
-#include "track.h"
+#include "Track.h"
 #include <math.h>
 #include <stdlib.h>
 

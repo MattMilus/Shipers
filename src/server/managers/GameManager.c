@@ -88,12 +88,18 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
         memset(&state->players[i].client_addr, 0, sizeof(state->players[i].client_addr));
     }
 
-    const Vector2f control_points[] = {
+    const Vector2f control_points1[] = {
     {0.0f, 0.0f},
     {300.0f, 700.0f},
     {1000.0f, 1000.0f}
     };
-    track_generate(control_points, 3);
+    track_generate(control_points1, 3);
+    const Vector2f control_points2[] = {
+    {250.0f, -25.0f},
+    {550.0f, 675.0f},
+    {1250.0f, 975.0f}
+    };
+    track_generate(control_points2, 3);
 }
 
 int game_manager_add_player(GameState* state, struct sockaddr_in* client_addr, const char* nickname) {

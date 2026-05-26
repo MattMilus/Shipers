@@ -35,7 +35,7 @@ static Vector2f get_bspline_point(Vector2f p0, Vector2f p1, Vector2f p2, Vector2
 void track_generate(const Vector2f* control_points, size_t count) {
     if (count == 0) return;
 
-    track_buoy_count = 0; // delete for multiple bounds
+    //track_buoy_count = 0; // delete for multiple bounds
 
     const float separation_distance = 50.0f;
     const int segments_per_curve = 20;

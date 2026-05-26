@@ -95,9 +95,4 @@ void player_finished(const GameState* state, int player_id, int points, float ra
                    (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
         }
     }
-
-    fprintf(stderr, "Player %d finished with %d points\n", player_id, packet.finishingPoints);
-    fprintf(stderr, "Player %d finished with time %.2f\n", player_id, race_time);
-    fprintf(stderr, "Winner finished with time %.2lu\n", state->winner_time);
-    fprintf(stderr, "Race started at time %.2lu\n", state->race_start_ms);
 }

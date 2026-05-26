@@ -5,6 +5,7 @@
 #include <string>
 
 #include "entities/Player.h"
+#include "managers/EndGameScoreboard.h"
 #include "managers/GameManager.h"
 #include "managers/Panel.h"
 #include "managers/Renderer.h"
@@ -73,7 +74,12 @@ int main() {
     auto handCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Hand);
     auto textCursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Text);
 
-    sf::Font uiFont("assets/fonts/Arial.ttf");
+    sf::Font uiFont;
+    if (!uiFont.openFromFile("assets/fonts/Arial.ttf")) {
+        std::cerr << "Blad: Nie udalo sie wczytac pliku czcionki. Sprawdz Working Directory!" << std::endl;
+        return -1;
+    }
+
     sf::Clock globalClock;
     sf::Clock deltaClock;
     sf::Clock networkClock;
@@ -117,7 +123,22 @@ int main() {
         }
     });
 
+    EndGameScoreboard scoreboard;
+    scoreboard.setCallbacks(
+        [&]() { window.close(); },
+        [&]() {
+            gameManager->resetConnection();
+            gameManager->clearLobbyPlayers();
+            gameManager->connectToServer(serverIpField.getValue(), nicknameField.getValue());
+        }
+    );
+
     renderer->setOverlayDrawer([&](sf::RenderWindow& renderWindow) {
+        if (gameManager->getSessionPhase() == SessionPhase::EndGame) {
+            scoreboard.draw(renderWindow, uiFont, gameManager->getPlayerId());
+            return;
+        }
+
         if (gameManager->isConnectedToServer() && gameManager->getSessionPhase() == SessionPhase::Race) {
             return;
         }
@@ -255,6 +276,7 @@ int main() {
 
     gameManager->generateTrack({ {0.0f, 0.0f}, {300.0f, 700.0f}, {1000.0f, 1000.0f} });
     gameManager->generateTrack({ { 250.0f, -25.0f }, { 550.0f, 675.0f }, { 1250.0f, 975.0f } });
+    gameManager->addFinish({1200.0f, 1200.f});
 
     while (window.isOpen()) {
         const float time = globalClock.getElapsedTime().asSeconds();
@@ -266,11 +288,8 @@ int main() {
             }
 
             const bool showLobbyOverlay =
-                !gameManager->isConnectedToServer() || gameManager->getSessionPhase() != SessionPhase::Race;
-            const sf::Vector2f mousePos = {
-                static_cast<float>(sf::Mouse::getPosition(window).x),
-                static_cast<float>(sf::Mouse::getPosition(window).y)
-            };
+                !gameManager->isConnectedToServer() || gameManager->getSessionPhase() == SessionPhase::Lobby ||
+                    gameManager->getSessionPhase() == SessionPhase::Countdown;
 
             if (const auto* textEntered = event->getIf<sf::Event::TextEntered>()) {
                 if (showLobbyOverlay && !gameManager->isConnectedToServer()) {
@@ -282,38 +301,49 @@ int main() {
                 }
             }
 
-            if (showLobbyOverlay && event->is<sf::Event::MouseButtonPressed>()) {
-                if (!gameManager->isConnectedToServer() && serverIpField.contains(mousePos)) {
-                    serverIpField.setFocused(true);
-                    nicknameField.setFocused(false);
-                } else if (!gameManager->isConnectedToServer() && nicknameField.contains(mousePos)) {
-                    serverIpField.setFocused(false);
-                    nicknameField.setFocused(true);
-                } else {
-                    serverIpField.setFocused(false);
-                    nicknameField.setFocused(false);
+            if (const auto* mousePress = event->getIf<sf::Event::MouseButtonPressed>()) {
+                sf::Vector2f clickPos = window.mapPixelToCoords(mousePress->position);
 
-                    if (actionButton.contains(mousePos)) {
-                        actionButton.onClick();
+                if (showLobbyOverlay) {
+                    if (!gameManager->isConnectedToServer() && serverIpField.contains(clickPos)) {
+                        serverIpField.setFocused(true);
+                        nicknameField.setFocused(false);
+                    } else if (!gameManager->isConnectedToServer() && nicknameField.contains(clickPos)) {
+                        serverIpField.setFocused(false);
+                        nicknameField.setFocused(true);
+                    } else {
+                        serverIpField.setFocused(false);
+                        nicknameField.setFocused(false);
+
+                        if (actionButton.contains(clickPos)) {
+                            actionButton.onClick();
+                        }
                     }
+                }
+
+                if (gameManager->getSessionPhase() == SessionPhase::EndGame) {
+                    scoreboard.handleMouseClick(clickPos);
                 }
             }
         }
 
+        const sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
         const bool showLobbyOverlay =
-            !gameManager->isConnectedToServer() || gameManager->getSessionPhase() != SessionPhase::Race;
-        const sf::Vector2f mousePos = {
-            static_cast<float>(sf::Mouse::getPosition(window).x),
-            static_cast<float>(sf::Mouse::getPosition(window).y)
-        };
+            !gameManager->isConnectedToServer() || gameManager->getSessionPhase() == SessionPhase::Lobby ||
+                gameManager->getSessionPhase() == SessionPhase::Countdown;
         if (showLobbyOverlay && actionButton.contains(mousePos) && regCursor && handCursor) {
             window.setMouseCursor(*handCursor);
         } else if (showLobbyOverlay && (serverIpField.contains(mousePos) || nicknameField.contains(mousePos)) && textCursor) {
             window.setMouseCursor(*textCursor);
         } else if (regCursor) {
             window.setMouseCursor(*regCursor);
-     
         }
+
+        if (gameManager->getSessionPhase() == SessionPhase::EndGame && scoreboard.containsMouse(mousePos) && handCursor) {
+            window.setMouseCursor(*handCursor);
+        }
+
 
         if (sf::UdpSocket* socket = gameManager->getUdpSocket()) {
             char buffer[2048];
@@ -348,6 +378,7 @@ int main() {
         }
 
         for (auto& [id, boat] : gameManager->getActiveBoats()) {
+            if (boat->isFinished()) continue;
             if (id == gameManager->getPlayerId()) {
                 if (gameManager->getSessionPhase() == SessionPhase::Race) {
                     boat->updateLocal(deltaTime);
@@ -367,12 +398,31 @@ int main() {
         }
 
         if (gameManager->isConnectedToServer() &&
-            (gameManager->getSessionPhase() == SessionPhase::Lobby || gameManager->getSessionPhase() == SessionPhase::Countdown)) {
+            (gameManager->getSessionPhase() == SessionPhase::Lobby || gameManager->getSessionPhase() == SessionPhase::Countdown ||
+                gameManager->getSessionPhase() == SessionPhase::EndGame)) {
             if (keepAliveClock.getElapsedTime().asSeconds() >= 1.0f) {
                 StateManager::sendIAmAlive(gameManager);
                 keepAliveClock.restart();
             }
         }
+
+        /**
+         * Updating scores
+         */
+        std::vector<PlayerScore> scores;
+        for (auto& [id, boat] : gameManager->getActiveBoats()) {
+            scores.push_back(
+                PlayerScore{
+                    id,
+                    gameManager->getLobbyPlayers().at(id).nickname,
+                    boat->isFinished(),
+                    boat->getRaceTime(),
+                    boat->getPoints(), // @Todo: Implement coins functionality
+                    boat->getPoints()
+                }
+            );
+        }
+        scoreboard.updateScores(scores);
 
         updateActionButton(actionButton, *gameManager);
         renderer->render(time);

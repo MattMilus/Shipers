@@ -7,12 +7,12 @@ void printAt(int x, int y, const char* format, ...) {
     // 1. Skocz do pozycji (y - wiersz, x - kolumna)
     printf("\033[%d;%dH", y, x);
 
-    // 2. Obs³u¿ resztê argumentów jak w printf
+    // 2. ObsÅ‚uÅ¼ resztÄ™ argumentÃ³w jak w printf
     va_list args;
     va_start(args, format);
     vprintf(format, args);
     va_end(args);
 
-    // 3. Wymuœ wypisanie (wa¿ne w pêtlach!)
+    // 3. WymuÅ› wypisanie (waÅ¼ne w pÄ™tlach!)
     fflush(stdout);
 }

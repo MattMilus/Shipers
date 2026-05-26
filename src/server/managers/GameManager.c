@@ -7,7 +7,7 @@
 #include <time.h>
 #include "../entities/Track.h"
 
-static uint64_t now_ms(void) {
+uint64_t now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     return ((uint64_t)ts.tv_sec * 1000ULL) + ((uint64_t)ts.tv_nsec / 1000000ULL);
@@ -29,6 +29,9 @@ static void write_player_nickname(char* destination, const size_t destination_si
 
 static void reset_player_to_lobby(Player* player) {
     player->isReady = 0;
+    player->isFinished = 0;
+    player->boat.finishedInfoSent = 0;
+
     player->boat.velocity = (Vector2f){0.0f, 0.0f};
     player->boat.rotation = 0.0f;
     player->boat.throttle = 0.0f;
@@ -63,8 +66,15 @@ static void schedule_game_start_locked(GameState* state) {
     state->phase = GAME_PHASE_COUNTDOWN;
     state->scheduled_start_ms = now_ms() + GAME_START_COUNTDOWN_MS;
 
+    state->player_finished_count = 0;
+    state->winner_time = 0;
+    state->race_start_ms = 0;
+
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (state->players[i].isActive) {
+            state->players[i].isFinished = 0;
+            state->players[i].boat.finishedInfoSent = 0;
+
             move_player_to_race_start(&state->players[i], i);
         }
     }
@@ -77,9 +87,13 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
     state->listenfd_socket = listenfd_socket;
     state->phase = GAME_PHASE_LOBBY;
     state->scheduled_start_ms = 0;
+    state->player_finished_count = 0;
+    state->winner_time = 0;
+    state->race_start_ms = 0;
 
     for (int i = 0; i < MAX_PLAYERS; i++) {
         state->players[i].isActive = 0;
+        state->players[i].isFinished = 0;
         state->players[i].isReady = 0;
         state->players[i].playerId = i;
         write_player_nickname(state->players[i].nickname, sizeof(state->players[i].nickname), NULL, i);
@@ -100,6 +114,9 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
     {1250.0f, 975.0f}
     };
     track_generate(control_points2, 3);
+
+    const Vector2f finish_pos = {1200.0f, 1200.0f};
+    track_set_finish(finish_pos);
 }
 
 int game_manager_add_player(GameState* state, struct sockaddr_in* client_addr, const char* nickname) {
@@ -261,6 +278,7 @@ int game_manager_has_countdown_expired(GameState* state) {
     if (state->phase == GAME_PHASE_COUNTDOWN && now_ms() >= state->scheduled_start_ms) {
         state->phase = GAME_PHASE_RACE;
         state->scheduled_start_ms = 0;
+        state->race_start_ms = now_ms();
         should_start = 1;
     }
 
@@ -361,9 +379,11 @@ void buoyCollision(Boat* boat, Vector2f buoyPos, float buoyRadius) {
 void game_manager_resolve_collisions(GameState* state) {
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (!state->players[i].isActive) continue;
+        if (state->players[i].isFinished) continue;
 
         for (int j = i + 1; j < MAX_PLAYERS; j++) {
             if (!state->players[j].isActive) continue;
+            if (state->players[j].isFinished) continue;
 
             boatCollision(&state->players[i].boat, &state->players[j].boat);
         }
@@ -375,4 +395,11 @@ void game_manager_resolve_collisions(GameState* state) {
             buoyCollision(&state->players[i].boat, buoyPos, buoyRadius);
         }
     }
+}
+
+int get_finish_points(GameState* state, uint64_t finishing_time) {
+    int points = WINNING_POINTS - POINTS_LOSS_FOR_SECOND * ((finishing_time - state->winner_time) / 1000.f);
+    if (points < 0) points = 0;
+
+    return points;
 }

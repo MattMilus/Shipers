@@ -2,6 +2,7 @@
 
 #include <sys/socket.h>
 #include <time.h>
+#include <stdio.h>
 
 #include "../ServerPackets.h"
 
@@ -61,6 +62,7 @@ void broadcast_state(GameState* state) {
             snapshot.throttle = state->players[i].boat.throttle;
             snapshot.velocityX = state->players[i].boat.velocity.x;
             snapshot.velocityY = state->players[i].boat.velocity.y;
+            snapshot.points = state->players[i].boat.points;
 
             packet.players[packet.active_players_count] = snapshot;
             packet.active_players_count++;
@@ -77,4 +79,25 @@ void broadcast_state(GameState* state) {
                    (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
         }
     }
+}
+
+void player_finished(const GameState* state, int player_id, int points, float race_time) {
+    PacketPlayerFinished packet;
+    packet.type = MSG_PLAYER_FINISHED;
+    packet.player_id = player_id;
+    packet.place = state->player_finished_count;
+    packet.time = race_time;
+    packet.finishingPoints = points;
+
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+        if (state->players[i].isActive) {
+            sendto(state->listenfd_socket, &packet, sizeof(packet), 0,
+                   (struct sockaddr*)&state->players[i].client_addr, sizeof(struct sockaddr_in));
+        }
+    }
+
+    fprintf(stderr, "Player %d finished with %d points\n", player_id, packet.finishingPoints);
+    fprintf(stderr, "Player %d finished with time %.2f\n", player_id, race_time);
+    fprintf(stderr, "Winner finished with time %.2lu\n", state->winner_time);
+    fprintf(stderr, "Race started at time %.2lu\n", state->race_start_ms);
 }

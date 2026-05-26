@@ -56,6 +56,22 @@ void* game_loop(void* arg) {
         for (int i = 0; i < MAX_PLAYERS; i++) {
             if (state->players[i].isActive) {
                 boat_update_physics(&state->players[i].boat, deltaTime);
+                if (!state->players[i].boat.finishedInfoSent && isBoatFinished(state->players[i].boat.position, &track_finish_buoy)) {
+                    fprintf(stderr, "DEBUG now %.2lu\n", now_ms());
+                    uint64_t finishing_time = now_ms() - state->race_start_ms;
+                    fprintf(stderr, "DEBUG finishing time %.2lu\n", finishing_time);
+                    fprintf(stderr, "DEBUG race start time %.2lu\n", state->race_start_ms);
+                    if (state->player_finished_count == 0) state->winner_time = finishing_time;
+                    state->players[i].boat.raceTime = (float) finishing_time / 1000.0f;
+
+                    state->players[i].isFinished = true;
+                    ++state->player_finished_count;
+
+                    state->players[i].boat.points += get_finish_points(state, finishing_time);
+
+                    player_finished(state, state->players[i].playerId, state->players[i].boat.points, state->players[i].boat.raceTime);
+                    state->players[i].boat.finishedInfoSent = 1;
+                }
             }
         }
 

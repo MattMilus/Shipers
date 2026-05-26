@@ -22,7 +22,8 @@
 enum class SessionPhase {
     Lobby,
     Countdown,
-    Race
+    Race,
+    EndGame
 };
 
 struct LobbyPlayerInfo {
@@ -68,6 +69,7 @@ public:
     void setNickname(std::string newNickname);
     const std::string& getNickname() const;
     SessionPhase getSessionPhase() const;
+    void setSessionPhase(SessionPhase newSessionPhase);
     float getCountdownSecondsLeft() const;
     bool isConnectedToServer() const;
     void setPlayerId(int id);
@@ -85,10 +87,13 @@ public:
     bool hasBoat(int id);
     void removeBoat(int id);
 	void generateTrack(std::vector<sf::Vector2f> controlPoints);
+    void addFinish(sf::Vector2f finishPos);
 	[[nodiscard]] const Track& getTrack() const;
     [[nodiscard]] const std::map<int, std::unique_ptr<Boat>>& getActiveBoats() const;
     [[nodiscard]] Boat* getBoatById(int id) const;
     [[nodiscard]] Player* getPlayer() const;
+    void localPlayerFinished();
+    void setPlayerTime(int id, float time) const;
 
     int getPlayerId() const;
 };

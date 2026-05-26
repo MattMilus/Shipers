@@ -5,6 +5,7 @@
 #include "Boat.h"
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 #include <SFML/Graphics/CircleShape.hpp>
 
 constexpr float PI = 3.14159265f;
@@ -24,6 +25,10 @@ Boat::Boat(sf::Vector2f startPos)
 
     dragForward = 0.995f;
     dragLateral = 0.98f;
+
+    points = 0;
+    raceTime = -1.0f;
+    finished = false;
 }
 
 void Boat::handleRotation(float deltaTime) {
@@ -138,3 +143,31 @@ float Boat::getSpeed() const {
 }
 
 float Boat::getThrottle() const { return throttle; }
+
+void Boat::setPoints(int newPoints) {
+    points = newPoints;
+}
+
+void Boat::addPoints(int newPoints) {
+    points += newPoints;
+}
+
+int Boat::getPoints() const {
+    return points;
+}
+
+void Boat::setFinished(bool newFinished) {
+    finished = newFinished;
+}
+
+bool Boat::isFinished() const {
+    return finished;
+}
+
+void Boat::setRaceTime(float newRaceTime) {
+    raceTime = newRaceTime;
+}
+
+float Boat::getRaceTime() const {
+    return raceTime;
+}

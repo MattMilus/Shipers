@@ -196,6 +196,28 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
             gameManager->enterLobby();
             break;
         }
+        case MSG_PLAYER_FINISHED: {
+            if (receivedSize != sizeof(PacketPlayerFinished)) {
+                break;
+            }
+
+            PacketPlayerFinished finishedPacket{};
+            std::memcpy(&finishedPacket, buffer, sizeof(PacketPlayerFinished));
+
+            Boat* player = gameManager->getBoatById(finishedPacket.player_id);
+            if (player == nullptr) {
+                return;
+            }
+
+            gameManager->setPlayerTime(finishedPacket.player_id, finishedPacket.time);
+            player->setFinished(true);
+            player->addPoints(finishedPacket.finishingPoints);
+
+            if (finishedPacket.player_id == gameManager->getPlayerId()) {
+                gameManager->localPlayerFinished();
+            }
+            break;
+        }
         default:
             std::cerr << "Received unknown message: " << header->type << "\n";
             break;

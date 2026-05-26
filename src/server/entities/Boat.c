@@ -18,6 +18,10 @@ void boat_init(Boat* boat, Vector2f start_pos) {
     boat->turn_speed = 120.0f;
     boat->drag_forward = 0.995f;
     boat->drag_lateral = 0.98f;
+
+    boat->points = 0;
+    boat->raceTime = 0.0f;
+    boat->finishedInfoSent = 0;
 }
 
 void boat_set_throttle(Boat* boat, float new_throttle) {

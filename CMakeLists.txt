@@ -29,6 +29,10 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             src/server/packets_handlers/StateManager.c
             src/server/packets_handlers/StateManager.h
             src/server/ServerPackets.h
+            src/server/tracks/TrackLoader.c
+            src/server/tracks/TrackLoader.h
+            src/server/tracks/tracks/Track1.c
+            src/server/tracks/tracks/Track1.h
     )
 
     target_link_libraries(ShipersServer m)
@@ -77,6 +81,10 @@ else()
             src/client/entities/Track.cpp
             src/client/managers/EndGameScoreboard.cpp
             src/client/managers/EndGameScoreboard.h
+            src/client/tracks/TrackLoader.cpp
+            src/client/tracks/TrackLoader.h
+            src/client/tracks/tracks/Track1.cpp
+            src/client/tracks/tracks/Track1.h
     )
 
     if(MINGW)

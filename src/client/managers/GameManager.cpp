@@ -26,8 +26,8 @@ GameManager::GameManager()
       serverIpAddress(sf::IpAddress::resolve("127.0.0.1").value()) {
 }
 
-sf::Vector2f GameManager::raceSpawnForId(const int id) {
-    return {300.0f + (static_cast<float>(id) * 90.0f), 450.0f};
+sf::Vector2f GameManager::raceSpawnForId(const int id) const {
+    return track.getSpawnPoints()[id];
 }
 
 int GameManager::connectToServer(const std::string& serverIp, const std::string& newNickname) {
@@ -293,12 +293,20 @@ void GameManager::removeBoat(const int id) {
     activeBoats.erase(id);
 }
 
-void GameManager::generateTrack(std::vector<sf::Vector2f> controlPoints) {
-	track.generateTrack(std::move(controlPoints));
+void GameManager::generateTrack(std::vector<sf::Vector2f> controlPoints, float trackWidth) {
+	track.generateTrack(std::move(controlPoints), trackWidth);
+}
+
+void GameManager::generateBarrier(std::vector<sf::Vector2f> controlPoints) {
+    track.generateBarrier(std::move(controlPoints));
 }
 
 void GameManager::addFinish(sf::Vector2f finishPos) {
     track.setFinish(finishPos);
+}
+
+void GameManager::setSpawnPoints(const std::vector<sf::Vector2f> &spawns) {
+    track.setSpawnPoints(spawns);
 }
 
 const Track& GameManager::getTrack() const {

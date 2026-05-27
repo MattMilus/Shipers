@@ -99,8 +99,11 @@ void Renderer::renderBackground(float time) {
             if (boat->isFinished()) continue;
 
             sf::Vector2f pos = boat->getPosition();
-            uPathHistory[currentIndex] = sf::Glsl::Vec2(pos.x / 800.f, pos.y / 600.f);
-            currentIndex++;
+            // Zabezpieczenie przed przepełnieniem (na wypadek dziwnych błędów ilości łodzi)
+            if (currentIndex < BOAT_U_PATH_HISTORY_SIZE) {
+                uPathHistory[currentIndex] = sf::Glsl::Vec2(pos.x / 800.f, pos.y / 600.f);
+                currentIndex++;
+            }
         }
 
         for (int i = BOAT_U_PATH_HISTORY_SIZE - 1; i >= boatCount; --i) {
@@ -110,9 +113,21 @@ void Renderer::renderBackground(float time) {
 
     const auto& buoys = gameManager->getTrack().getBuoys();
 
-    for (int i = 0; i < buoys.size(); ++i) {
+    // ==========================================
+    // KLUCZOWA ZMIANA: Zabezpieczenie pętli buoys
+    // ==========================================
+    // Wyliczamy, ile miejsca zostało nam do końca tablicy uPathHistory.
+    int availableBuoySlots = TOTAL_HISTORY_SIZE - BOAT_U_PATH_HISTORY_SIZE;
+    // Pętla obróci się maksymalnie tyle razy, ile mamy wolnych slotów w tablicy LUB tyle ile jest boi.
+    int limit = std::min(static_cast<int>(buoys.size()), availableBuoySlots);
+
+    for (int i = 0; i < limit; ++i) {
         uPathHistory[i + BOAT_U_PATH_HISTORY_SIZE] = buoys[i].position;
     }
+    // Ewentualne wyczyszczenie "resztek" jeśli tras było wcześniej więcej, a potem mniej
+    /*for(int i = limit; i < availableBuoySlots; ++i) {
+        uPathHistory[i + BOAT_U_PATH_HISTORY_SIZE] = sf::Glsl::Vec2(10000.0f, 10000.0f);
+    }*/
 
     renderTex.clear();
     renderTex.draw(screenQuad, &checkerShader);
@@ -169,25 +184,30 @@ void Renderer::renderTrack(float time) {
         return;
     }
 
-	const std::vector<Buoy>& buoys = gameManager->getTrack().getBuoys();
+    const std::vector<Buoy>& buoys = gameManager->getTrack().getBuoys();
+    const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
 
-	const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
-	
-	sf::CircleShape buoyShape;
-	buoyShape.setOrigin({ 25.f, 25.f });
-	buoyShape.setFillColor(sf::Color::Yellow);
-	buoyShape.setOutlineThickness(3.f);
-	buoyShape.setOutlineColor(sf::Color::Black);
-	float buoyRadiusOffset = 0.0f;
-	for (const Buoy& buoy : buoys) {
+    sf::CircleShape buoyShape;
+    buoyShape.setOrigin({ 25.f, 25.f });
+    buoyShape.setFillColor(sf::Color::Yellow);
+    buoyShape.setOutlineThickness(3.f);
+    buoyShape.setOutlineColor(sf::Color::Black);
+    float buoyRadiusOffset = 0.0f;
+
+    const float margin = 50.0f;
+
+    for (const Buoy& buoy : buoys) {
+        buoyRadiusOffset += 0.15f;
+        sf::Vector2f screenPos = buoy.position - cameraPosition + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
+        if (screenPos.x < -margin || screenPos.x > resolution.x + margin ||
+            screenPos.y < -margin || screenPos.y > resolution.y + margin) {
+            continue;
+            }
+
         buoyShape.setRadius(buoy.radius * (0.75 + sin(time + buoyRadiusOffset) * 0.25));
-		buoyRadiusOffset += 0.15f;
-		buoyShape.setPosition(
-			buoy.position - cameraPosition
-			+ sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
-		);
-		window.draw(buoyShape);
-	}
+        buoyShape.setPosition(screenPos);
+        window.draw(buoyShape);
+    }
 }
 
 void Renderer::renderBoats() {

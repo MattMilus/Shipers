@@ -7,6 +7,8 @@ size_t track_buoy_count = 0;
 static size_t track_capacity = 0;
 FinishBuoy track_finish_buoy;
 
+Vector2f track_spawn_points[4] = { {0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f} };
+
 static void push_buoy(Vector2f pos) {
     if (track_buoy_count >= track_capacity) {
         track_capacity = (track_capacity == 0) ? 64 : track_capacity * 2;
@@ -33,10 +35,17 @@ static Vector2f get_bspline_point(Vector2f p0, Vector2f p1, Vector2f p2, Vector2
     return result;
 }
 
-void track_generate(const Vector2f* control_points, size_t count) {
-    if (count == 0) return;
+static Vector2f normalize(Vector2f source) {
+    float length = hypotf(source.x, source.y);
+    if (length != 0.0f) {
+        Vector2f res = { source.x / length, source.y / length };
+        return res;
+    }
+    return source;
+}
 
-    //track_buoy_count = 0; // delete for multiple bounds
+void track_generate_barrier(const Vector2f* control_points, size_t count) {
+    if (count == 0) return;
 
     const float separation_distance = 50.0f;
     const int segments_per_curve = 20;
@@ -75,7 +84,69 @@ void track_generate(const Vector2f* control_points, size_t count) {
             push_buoy(next_pos);
         }
     }
+    free(padded_points);
+}
 
+void track_generate(const Vector2f* control_points, size_t count, float track_width) {
+    if (count < 2) return;
+
+    const float separation_distance = 50.0f;
+    const int segments_per_curve = 20;
+
+    size_t padded_count = count + 4;
+    Vector2f* padded_points = malloc(padded_count * sizeof(Vector2f));
+
+    padded_points[0] = control_points[0];
+    padded_points[1] = control_points[0];
+    for (size_t i = 0; i < count; ++i) padded_points[i + 2] = control_points[i];
+    padded_points[padded_count - 2] = control_points[count - 1];
+    padded_points[padded_count - 1] = control_points[count - 1];
+
+    size_t spline_capacity = (count + 1) * segments_per_curve + 1;
+    Vector2f* spline_points = malloc(spline_capacity * sizeof(Vector2f));
+    size_t spline_count = 0;
+
+    for (size_t i = 0; i < padded_count - 3; ++i) {
+        for (int j = 0; j <= segments_per_curve; ++j) {
+            if (j == 0 && i > 0) continue;
+            float t = (float)j / (float)segments_per_curve;
+            spline_points[spline_count++] = get_bspline_point(
+                padded_points[i], padded_points[i + 1],
+                padded_points[i + 2], padded_points[i + 3], t
+            );
+        }
+    }
+
+    Vector2f last_left = { -9999.0f, -9999.0f };
+    Vector2f last_right = { -9999.0f, -9999.0f };
+
+    for (size_t i = 0; i < spline_count; ++i) {
+        Vector2f dir;
+        if (i < spline_count - 1) {
+            dir.x = spline_points[i+1].x - spline_points[i].x;
+            dir.y = spline_points[i+1].y - spline_points[i].y;
+        } else {
+            dir.x = spline_points[i].x - spline_points[i-1].x;
+            dir.y = spline_points[i].y - spline_points[i-1].y;
+        }
+
+        Vector2f normal = { -dir.y, dir.x };
+        normal = normalize(normal);
+
+        Vector2f left_pos = { spline_points[i].x + normal.x * track_width, spline_points[i].y + normal.y * track_width };
+        Vector2f right_pos = { spline_points[i].x - normal.x * track_width, spline_points[i].y - normal.y * track_width };
+
+        if (i == 0 || hypotf(left_pos.x - last_left.x, left_pos.y - last_left.y) >= separation_distance) {
+            push_buoy(left_pos);
+            last_left = left_pos;
+        }
+        if (i == 0 || hypotf(right_pos.x - last_right.x, right_pos.y - last_right.y) >= separation_distance) {
+            push_buoy(right_pos);
+            last_right = right_pos;
+        }
+    }
+
+    free(spline_points);
     free(padded_points);
 }
 
@@ -83,6 +154,13 @@ void track_set_finish(const Vector2f finish_buoy_pos) {
     track_finish_buoy.buoy.position = finish_buoy_pos;
     track_finish_buoy.buoy.radius = 25.0f;
     track_finish_buoy.finish_radius = DEFAULT_FINISH_RADIUS;
+}
+
+void track_set_spawns(const Vector2f* spawns) {
+    if (spawns == NULL) return;
+    for (int i = 0; i < 4; ++i) {
+        track_spawn_points[i] = spawns[i];
+    }
 }
 
 void track_cleanup(void) {
@@ -93,16 +171,10 @@ void track_cleanup(void) {
 }
 
 int isBoatFinished(const Vector2f boat_position, const FinishBuoy* finish_buoy) {
-    if (finish_buoy == NULL) {
-        return 0;
-    }
-
+    if (finish_buoy == NULL) return 0;
     const float dx = boat_position.x - finish_buoy->buoy.position.x;
     const float dy = boat_position.y - finish_buoy->buoy.position.y;
-
     const float distance_squared = (dx * dx) + (dy * dy);
-
     const float radius_squared = finish_buoy->finish_radius * finish_buoy->finish_radius;
-
     return distance_squared <= radius_squared;
 }

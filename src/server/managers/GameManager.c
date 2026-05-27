@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <time.h>
 #include "../entities/Track.h"
+#include "../tracks/TrackLoader.h"
 
 uint64_t now_ms(void) {
     struct timespec ts;
@@ -14,8 +15,9 @@ uint64_t now_ms(void) {
 }
 
 static Vector2f race_spawn_for_slot(const int slot) {
-    const Vector2f spawn = {300.0f + ((float)slot * 90.0f), 450.0f};
-    return spawn;
+    /*const Vector2f spawn = {300.0f + ((float)slot * 90.0f), 450.0f};
+    return spawn;*/
+    return track_spawn_points[slot];
 }
 
 static void write_player_nickname(char* destination, const size_t destination_size, const char* nickname, const int player_id) {
@@ -91,6 +93,8 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
     state->winner_time = 0;
     state->race_start_ms = 0;
 
+    TrackLoader_loadTrack(TRACK_1);
+
     for (int i = 0; i < MAX_PLAYERS; i++) {
         state->players[i].isActive = 0;
         state->players[i].isFinished = 0;
@@ -101,22 +105,6 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
         state->players[i].lastActivityTime = 0;
         memset(&state->players[i].client_addr, 0, sizeof(state->players[i].client_addr));
     }
-
-    const Vector2f control_points1[] = {
-    {0.0f, 0.0f},
-    {300.0f, 700.0f},
-    {1000.0f, 1000.0f}
-    };
-    track_generate(control_points1, 3);
-    const Vector2f control_points2[] = {
-    {250.0f, -25.0f},
-    {550.0f, 675.0f},
-    {1250.0f, 975.0f}
-    };
-    track_generate(control_points2, 3);
-
-    const Vector2f finish_pos = {1200.0f, 1200.0f};
-    track_set_finish(finish_pos);
 }
 
 int game_manager_add_player(GameState* state, struct sockaddr_in* client_addr, const char* nickname) {

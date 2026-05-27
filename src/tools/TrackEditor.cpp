@@ -4,11 +4,13 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 // Struktura przechowująca pojedynczą linię/trasę
 struct TrackPath {
     std::vector<sf::Vector2f> points;
     bool isDouble = true; // true = Trasa (2 bandy), false = Pojedyncza ściana/bariera
+    float width = 150.0f; // Indywidualna szerokość (domyślnie powiększona dla 4 łódek)
 };
 
 sf::Vector2f getBSplinePoint(const sf::Vector2f& p0, const sf::Vector2f& p1,
@@ -43,15 +45,17 @@ int main() {
 
     // Główny kontener na wszystkie ścieżki
     std::vector<TrackPath> paths;
-    // Dodajemy pierwszą, domyślną trasę
-    paths.push_back({ {{0.0f, 0.0f}, {300.0f, 700.0f}, {1000.0f, 1000.0f}}, true });
+    paths.push_back({ {{0.0f, 0.0f}, {300.0f, 700.0f}, {1000.0f, 1000.0f}}, true, 150.0f });
 
-    int activePathIndex = 0; // Indeks aktualnie edytowanej ścieżki
+    int activePathIndex = 0;
+
+    // Zmienne mety i spawnów
     sf::Vector2f finishPos(1200.0f, 1200.0f);
+    std::vector<sf::Vector2f> spawnPoints = {
+        {0.0f, -50.0f}, {50.0f, -50.0f}, {0.0f, 50.0f}, {50.0f, 50.0f}
+    };
 
-    float trackWidth = 80.0f;
     int segmentsPerCurve = 20;
-
     int draggedPathIndex = -1;
     int draggedPointIndex = -1;
     bool isDragging = false;
@@ -64,8 +68,10 @@ int main() {
     std::cout << "[Scroll]     : Przyblizanie / Oddalanie\n";
     std::cout << "[N]          : NOWA linia/sciezka\n";
     std::cout << "[TAB]        : ZMIEN aktywna linie\n";
-    std::cout << "[T]          : PRZELACZ tryb aktywnej linii (Podwojna Trasa <-> Pojedyncza Banda)\n";
+    std::cout << "[T]          : PRZELACZ tryb aktywnej linii (Podwojna/Pojedyncza)\n";
+    std::cout << "[Z] / [X]    : ZMNIEJSZ / ZWIEKSZ szerokosc aktywnej trasy\n";
     std::cout << "[F]          : Przestaw METE\n";
+    std::cout << "[1][2][3][4] : Przestaw odpowiedni SPAWN na pozycje myszki\n";
     std::cout << "[C]          : Wyczysc wszystko\n";
     std::cout << "[SPACE]      : EKSPORT KODU C++ DO KONSOLI\n\n";
 
@@ -92,13 +98,12 @@ int main() {
                         float catchRadius = 15.0f * zoomLevel;
                         bool caught = false;
 
-                        // Szukamy czy kliknięto w jakikolwiek punkt na dowolnej ścieżce
                         for (size_t p = 0; p < paths.size(); ++p) {
                             for (size_t i = 0; i < paths[p].points.size(); ++i) {
                                 if (std::hypot(paths[p].points[i].x - mouseWorldPos.x, paths[p].points[i].y - mouseWorldPos.y) < catchRadius) {
                                     draggedPathIndex = static_cast<int>(p);
                                     draggedPointIndex = static_cast<int>(i);
-                                    activePathIndex = static_cast<int>(p); // Złapanie punktu aktywuje jego ścieżkę
+                                    activePathIndex = static_cast<int>(p);
                                     isDragging = true;
                                     caught = true;
                                     break;
@@ -107,7 +112,6 @@ int main() {
                             if (caught) break;
                         }
 
-                        // Jeśli kliknięto w puste miejsce, dodajemy punkt do aktywnej ścieżki
                         if (!caught && !paths.empty()) {
                             paths[activePathIndex].points.push_back(mouseWorldPos);
                         }
@@ -142,10 +146,24 @@ int main() {
             }
 
             if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                // Spawny 1-4
+                if (key->code == sf::Keyboard::Key::Num1) spawnPoints[0] = mouseWorldPos;
+                if (key->code == sf::Keyboard::Key::Num2) spawnPoints[1] = mouseWorldPos;
+                if (key->code == sf::Keyboard::Key::Num3) spawnPoints[2] = mouseWorldPos;
+                if (key->code == sf::Keyboard::Key::Num4) spawnPoints[3] = mouseWorldPos;
+
+                // Szerokość aktywnej trasy (Z - mniej, X - więcej)
+                if (key->code == sf::Keyboard::Key::Z) {
+                    if (!paths.empty()) paths[activePathIndex].width = std::max(20.0f, paths[activePathIndex].width - 10.0f);
+                }
+                if (key->code == sf::Keyboard::Key::X) {
+                    if (!paths.empty()) paths[activePathIndex].width += 10.0f;
+                }
+
                 if (key->code == sf::Keyboard::Key::N) {
-                    paths.push_back({ {}, true });
+                    paths.push_back({ {}, true, 150.0f });
                     activePathIndex = static_cast<int>(paths.size() - 1);
-                    std::cout << "Dodano nowa sciezke. Aktywna sciezka: " << activePathIndex << "\n";
+                    std::cout << "Dodano nowa sciezke. Aktywna: " << activePathIndex << "\n";
                 }
                 if (key->code == sf::Keyboard::Key::Tab) {
                     if (!paths.empty()) {
@@ -156,48 +174,88 @@ int main() {
                 if (key->code == sf::Keyboard::Key::T) {
                     if (!paths.empty()) {
                         paths[activePathIndex].isDouble = !paths[activePathIndex].isDouble;
-                        std::cout << "Zmieniono typ sciezki " << activePathIndex << " na: "
-                                  << (paths[activePathIndex].isDouble ? "Podwojna Trasa" : "Pojedyncza Banda") << "\n";
                     }
                 }
                 if (key->code == sf::Keyboard::Key::C) {
                     paths.clear();
-                    paths.push_back({ {}, true });
+                    paths.push_back({ {}, true, 150.0f });
                     activePathIndex = 0;
-                    std::cout << "Wyczyszczono wszystkie punkty i sciezki.\n";
                 }
                 if (key->code == sf::Keyboard::Key::F) {
                     editFinishMode = true;
                 }
+
+                // ==========================================
+                // GENERATOR KODU
+                // ==========================================
                 if (key->code == sf::Keyboard::Key::Space) {
-                    std::cout << "\n--- SKOPIUJ PONIZSZY KOD DO SWOJEJ GRY ---\n";
+                    std::cout << "\n======================================================\n";
+                    std::cout << "               SKOPIUJ KOD PONIZEJ\n";
+                    std::cout << "======================================================\n\n";
+
+                    // --- KOD DLA SERWERA (C) ---
+                    std::cout << "/// --- KOD DLA SERWERA (C - main.c / GameManager.c) ---\n";
                     for (size_t p = 0; p < paths.size(); ++p) {
                         if (paths[p].points.empty()) continue;
 
-                        if (paths[p].isDouble) {
-                            std::cout << "// TRASA GLOWNA (Podwojna)\n";
-                            std::cout << "gameManager->generateTrack({ ";
-                        } else {
-                            std::cout << "// BARIERA / ZABEZPIECZENIE (Pojedyncza)\n";
-                            std::cout << "gameManager->generateBarrier({ "; // Pamiętaj by dodać taką funkcję w swoim kodzie gry!
-                        }
-
+                        std::cout << "const Vector2f control_points" << (p + 1) << "[] = {\n";
                         for (size_t i = 0; i < paths[p].points.size(); ++i) {
-                            std::cout << "{" << std::fixed << std::setprecision(1) << paths[p].points[i].x << "f, " << paths[p].points[i].y << "f}";
-                            if (i < paths[p].points.size() - 1) std::cout << ", ";
+                            std::cout << "    {" << std::fixed << std::setprecision(1) << paths[p].points[i].x << "f, " << paths[p].points[i].y << "f}";
+                            if (i < paths[p].points.size() - 1) std::cout << ",\n";
+                            else std::cout << "\n";
                         }
+                        std::cout << "};\n";
 
                         if (paths[p].isDouble) {
-                            std::cout << " }, {" << finishPos.x << "f, " << finishPos.y << "f});\n\n";
+                            std::cout << "track_generate(control_points" << (p + 1) << ", " << paths[p].points.size() << ", " << paths[p].width << "f);\n\n";
                         } else {
-                            std::cout << " });\n\n";
+                            std::cout << "track_generate_barrier(control_points" << (p + 1) << ", " << paths[p].points.size() << ");\n\n";
                         }
                     }
-                    std::cout << "------------------------------------------\n";
+                    std::cout << "const Vector2f finish_pos = {" << std::fixed << std::setprecision(1) << finishPos.x << "f, " << finishPos.y << "f};\n";
+                    std::cout << "track_set_finish(finish_pos);\n\n";
+
+                    std::cout << "const Vector2f spawn_pos[] = {\n";
+                    for (int i = 0; i < 4; ++i) {
+                        std::cout << "    {" << std::fixed << std::setprecision(1) << spawnPoints[i].x << "f, " << spawnPoints[i].y << "f}";
+                        if (i < 3) std::cout << ",\n"; else std::cout << "\n";
+                    }
+                    std::cout << "};\n";
+                    std::cout << "track_set_spawns(spawn_pos);\n\n";
+
+                    // --- KOD DLA KLIENTA (C++) ---
+                    std::cout << "/// --- KOD DLA KLIENTA (C++ - main.cpp / GameManager.cpp) ---\n";
+                    for (size_t p = 0; p < paths.size(); ++p) {
+                        if (paths[p].points.empty()) continue;
+
+                        if (paths[p].isDouble) std::cout << "gameManager->generateTrack({\n";
+                        else std::cout << "gameManager->generateBarrier({\n";
+
+                        for (size_t i = 0; i < paths[p].points.size(); ++i) {
+                            std::cout << "    {" << std::fixed << std::setprecision(1) << paths[p].points[i].x << "f, " << paths[p].points[i].y << "f}";
+                            if (i < paths[p].points.size() - 1) std::cout << ",\n";
+                            else std::cout << "\n";
+                        }
+
+                        if (paths[p].isDouble) std::cout << "}, " << paths[p].width << "f);\n\n";
+                        else std::cout << "});\n\n";
+                    }
+
+                    std::cout << "gameManager->addFinish({" << std::fixed << std::setprecision(1) << finishPos.x << "f, " << finishPos.y << "f});\n\n";
+
+                    std::cout << "gameManager->setSpawnPoints({\n";
+                    for (int i = 0; i < 4; ++i) {
+                        std::cout << "    {" << std::fixed << std::setprecision(1) << spawnPoints[i].x << "f, " << spawnPoints[i].y << "f}";
+                        if (i < 3) std::cout << ",\n"; else std::cout << "\n";
+                    }
+                    std::cout << "});\n\n";
+
+                    std::cout << "======================================================\n\n";
                 }
             }
         }
 
+        // Ruch kamery
         float cameraSpeed = 400.0f * zoomLevel;
         float dt = 1.0f / 60.0f;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) view.move({0, -cameraSpeed * dt});
@@ -208,12 +266,11 @@ int main() {
         window.clear(sf::Color(30, 30, 35));
         window.setView(view);
 
-        // --- Renderowanie wszystkich ścieżek ---
+        // Rysowanie ścieżek
         for (size_t p = 0; p < paths.size(); ++p) {
             const auto& path = paths[p];
             bool isActive = (p == activePathIndex);
 
-            // Obliczanie punktów B-Spline dla danej ścieżki
             std::vector<sf::Vector2f> splinePoints;
             if (path.points.size() >= 2) {
                 std::vector<sf::Vector2f> paddedPoints;
@@ -236,7 +293,7 @@ int main() {
                 }
             }
 
-            // Rysowanie szkieletu i punktów kontrolnych
+            // Rysowanie kości i punktów kontrolnych
             if (!path.points.empty()) {
                 sf::VertexArray skeleton(sf::PrimitiveType::LineStrip, path.points.size());
                 for (size_t i = 0; i < path.points.size(); ++i) {
@@ -246,17 +303,15 @@ int main() {
                     sf::CircleShape cpShape(isActive ? 8.0f * zoomLevel : 6.0f * zoomLevel);
                     cpShape.setOrigin({cpShape.getRadius(), cpShape.getRadius()});
                     cpShape.setPosition(path.points[i]);
-                    // Aktywna ścieżka ma jasnoczerwone punkty, nieaktywna ciemnobordowe
                     cpShape.setFillColor(isActive ? sf::Color(235, 94, 85) : sf::Color(120, 40, 40));
                     window.draw(cpShape);
                 }
                 window.draw(skeleton);
             }
 
-            // Rysowanie wygładzonej linii (Trasa vs Banda)
+            // Rysowanie band i trasy
             if (splinePoints.size() >= 2) {
                 if (path.isDouble) {
-                    // Tryb: PODWÓJNA TRASA
                     sf::VertexArray centerLine(sf::PrimitiveType::LineStrip, splinePoints.size());
                     sf::VertexArray leftBanda(sf::PrimitiveType::LineStrip, splinePoints.size());
                     sf::VertexArray rightBanda(sf::PrimitiveType::LineStrip, splinePoints.size());
@@ -271,32 +326,42 @@ int main() {
 
                         sf::Vector2f normal = normalize({ -dir.y, dir.x });
 
-                        leftBanda[i].position = splinePoints[i] + normal * trackWidth;
+                        // Używamy path.width zamiast globalnego trackWidth
+                        leftBanda[i].position = splinePoints[i] + normal * path.width;
                         leftBanda[i].color = isActive ? sf::Color(52, 152, 219) : sf::Color(30, 80, 120);
 
-                        rightBanda[i].position = splinePoints[i] - normal * trackWidth;
+                        rightBanda[i].position = splinePoints[i] - normal * path.width;
                         rightBanda[i].color = isActive ? sf::Color(46, 204, 113) : sf::Color(20, 100, 50);
                     }
                     window.draw(centerLine);
                     window.draw(leftBanda);
                     window.draw(rightBanda);
                 } else {
-                    // Tryb: POJEDYNCZA BANDA
                     sf::VertexArray solidBarrier(sf::PrimitiveType::LineStrip, splinePoints.size());
                     for (size_t i = 0; i < splinePoints.size(); ++i) {
                         solidBarrier[i].position = splinePoints[i];
-                        solidBarrier[i].color = isActive ? sf::Color(243, 156, 18) : sf::Color(120, 80, 10); // Pomarańczowy kolor bariery
+                        solidBarrier[i].color = isActive ? sf::Color(243, 156, 18) : sf::Color(120, 80, 10);
                     }
                     window.draw(solidBarrier);
                 }
             }
         }
 
+        // Rysowanie Mety
         sf::CircleShape finishShape(15.0f * zoomLevel);
         finishShape.setOrigin({finishShape.getRadius(), finishShape.getRadius()});
         finishShape.setPosition(finishPos);
         finishShape.setFillColor(sf::Color::Yellow);
         window.draw(finishShape);
+
+        // Rysowanie Spawnów
+        for (int i = 0; i < 4; ++i) {
+            sf::CircleShape spawnShape(12.0f * zoomLevel);
+            spawnShape.setOrigin({spawnShape.getRadius(), spawnShape.getRadius()});
+            spawnShape.setPosition(spawnPoints[i]);
+            spawnShape.setFillColor(sf::Color::Cyan);
+            window.draw(spawnShape);
+        }
 
         window.display();
     }

@@ -20,9 +20,15 @@ extern Buoy* track_buoys;
 extern size_t track_buoy_count;
 extern FinishBuoy track_finish_buoy;
 
-void track_generate(const Vector2f* control_points, size_t count);
+extern Vector2f track_spawn_points[4];
+
+void track_generate(const Vector2f* control_points, size_t count, float track_width);
+void track_generate_barrier(const Vector2f* control_points, size_t count);
+
 void track_set_finish(const Vector2f finish_buoy_pos);
+void track_set_spawns(const Vector2f* spawns);
+
 void track_cleanup(void);
 int isBoatFinished(const Vector2f boat_position, const FinishBuoy* finish_buoy);
 
-#endif 
+#endif

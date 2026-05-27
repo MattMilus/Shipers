@@ -184,25 +184,30 @@ void Renderer::renderTrack(float time) {
         return;
     }
 
-	const std::vector<Buoy>& buoys = gameManager->getTrack().getBuoys();
+    const std::vector<Buoy>& buoys = gameManager->getTrack().getBuoys();
+    const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
 
-	const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
-	
-	sf::CircleShape buoyShape;
-	buoyShape.setOrigin({ 25.f, 25.f });
-	buoyShape.setFillColor(sf::Color::Yellow);
-	buoyShape.setOutlineThickness(3.f);
-	buoyShape.setOutlineColor(sf::Color::Black);
-	float buoyRadiusOffset = 0.0f;
-	for (const Buoy& buoy : buoys) {
+    sf::CircleShape buoyShape;
+    buoyShape.setOrigin({ 25.f, 25.f });
+    buoyShape.setFillColor(sf::Color::Yellow);
+    buoyShape.setOutlineThickness(3.f);
+    buoyShape.setOutlineColor(sf::Color::Black);
+    float buoyRadiusOffset = 0.0f;
+
+    const float margin = 50.0f;
+
+    for (const Buoy& buoy : buoys) {
+        buoyRadiusOffset += 0.15f;
+        sf::Vector2f screenPos = buoy.position - cameraPosition + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
+        if (screenPos.x < -margin || screenPos.x > resolution.x + margin ||
+            screenPos.y < -margin || screenPos.y > resolution.y + margin) {
+            continue;
+            }
+
         buoyShape.setRadius(buoy.radius * (0.75 + sin(time + buoyRadiusOffset) * 0.25));
-		buoyRadiusOffset += 0.15f;
-		buoyShape.setPosition(
-			buoy.position - cameraPosition
-			+ sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
-		);
-		window.draw(buoyShape);
-	}
+        buoyShape.setPosition(screenPos);
+        window.draw(buoyShape);
+    }
 }
 
 void Renderer::renderBoats() {

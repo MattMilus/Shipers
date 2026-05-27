@@ -12,6 +12,7 @@
 #include "managers/TextField.h"
 #include "managers/web_managers/PacketHandler.h"
 #include "managers/web_managers/StateManager.h"
+#include "tracks/TrackLoader.h"
 
 namespace {
 constexpr float NETWORK_TICK_RATE = 1.0f / 30.0f;
@@ -127,6 +128,7 @@ int main() {
     scoreboard.setCallbacks(
         [&]() { window.close(); },
         [&]() {
+            gameManager->disconnectFromServer();
             gameManager->resetConnection();
             gameManager->clearLobbyPlayers();
             gameManager->connectToServer(serverIpField.getValue(), nicknameField.getValue());
@@ -274,9 +276,7 @@ int main() {
         }
     });
 
-    gameManager->generateTrack({ {0.0f, 0.0f}, {300.0f, 700.0f}, {1000.0f, 1000.0f} });
-    gameManager->generateTrack({ { 250.0f, -25.0f }, { 550.0f, 675.0f }, { 1250.0f, 975.0f } });
-    gameManager->addFinish({1200.0f, 1200.f});
+    TrackLoader::loadTrack(Track1, gameManager);
 
     while (window.isOpen()) {
         const float time = globalClock.getElapsedTime().asSeconds();

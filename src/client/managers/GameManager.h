@@ -46,7 +46,7 @@ private:
     sf::IpAddress serverIpAddress;
 
     int addPlayer(int id, sf::Vector2f startPos);
-    static sf::Vector2f raceSpawnForId(int id);
+    sf::Vector2f raceSpawnForId(int id) const;
 
     void boatCollision(Boat* b1, Boat* b2);
     void buoyCollision(Boat* boat, const Buoy& buoy);
@@ -86,8 +86,12 @@ public:
     int addBoat(int id, sf::Vector2f startPos);
     bool hasBoat(int id);
     void removeBoat(int id);
-	void generateTrack(std::vector<sf::Vector2f> controlPoints);
+
+	void generateTrack(std::vector<sf::Vector2f> controlPoints, float trackWidth = 150.0f);
+    void generateBarrier(std::vector<sf::Vector2f> controlPoints);
     void addFinish(sf::Vector2f finishPos);
+    void setSpawnPoints(const std::vector<sf::Vector2f>& spawns);
+
 	[[nodiscard]] const Track& getTrack() const;
     [[nodiscard]] const std::map<int, std::unique_ptr<Boat>>& getActiveBoats() const;
     [[nodiscard]] Boat* getBoatById(int id) const;

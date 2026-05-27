@@ -35,6 +35,7 @@ void movePlayer(char* buffer, int sock, struct sockaddr_in* client_addr, GameSta
     pthread_mutex_lock(&gameState->lock);
 
     for (int i = 0; i < MAX_PLAYERS; i++) {
+        fprintf(stderr, "Moving player %d\n", gameState->players[i].playerId);
         if (gameState->players[i].isActive && gameState->players[i].playerId == move_data->player_id) {
             gameState->players[i].boat.rotation = move_data->rotation;
             gameState->players[i].boat.throttle = move_data->throttle;

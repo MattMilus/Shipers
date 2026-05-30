@@ -218,6 +218,16 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
             }
             break;
         }
+        case MSG_COINS_STATE: {
+            if (receivedSize != sizeof(PacketCoinsState)) {
+                break;
+            }
+
+            PacketCoinsState coinsPacket{};
+            std::memcpy(&coinsPacket, buffer, sizeof(PacketCoinsState));
+            gameManager->setCoinsState(coinsPacket.coins_bits);
+            break;
+        }
         default:
             std::cerr << "Received unknown message: " << header->type << "\n";
             break;

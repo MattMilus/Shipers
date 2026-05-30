@@ -26,6 +26,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             src/server/entities/Boat.h
             src/server/entities/Track.c
             src/server/entities/Track.h
+            src/server/entities/Coin.c
+            src/server/entities/Coin.h
             src/server/packets_handlers/StateManager.c
             src/server/packets_handlers/StateManager.h
             src/server/ServerPackets.h
@@ -70,6 +72,7 @@ else()
             src/client/entities/Player.h
             src/client/entities/Boat.cpp
             src/client/entities/Boat.h
+            src/client/entities/Coin.cpp
             src/client/managers/web_managers/ConnectionManager.cpp
             src/client/managers/web_managers/ConnectionManager.h
             src/client/managers/web_managers/StateManager.cpp

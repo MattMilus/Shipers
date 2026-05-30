@@ -11,12 +11,15 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <array>
+#include <vector>
 
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/UdpSocket.hpp"
 
 #include "../entities/Boat.h"
 #include "../entities/Player.h"
+#include "../entities/Coin.h"
 #include "../entities/Track.h"
 
 enum class SessionPhase {
@@ -44,6 +47,10 @@ private:
 
     sf::UdpSocket* updSocket;
     sf::IpAddress serverIpAddress;
+
+    // Coins: 8 groups of 8 coins -> 64 bits
+    std::vector<std::array<Coin, 8>> coinGroups;
+    std::uint64_t coinsState;
 
     int addPlayer(int id, sf::Vector2f startPos);
     sf::Vector2f raceSpawnForId(int id) const;
@@ -78,6 +85,11 @@ public:
     const std::map<int, LobbyPlayerInfo>& getLobbyPlayers() const;
 
     void handleCollisions();
+
+    // Coins
+    void setCoinsState(std::uint64_t bits);
+    [[nodiscard]] std::uint64_t getCoinsState() const;
+    [[nodiscard]] const std::vector<std::array<Coin, 8>>& getCoinGroups() const;
 
     void setUdpSocket(sf::UdpSocket* socket);
     sf::UdpSocket* getUdpSocket() const;

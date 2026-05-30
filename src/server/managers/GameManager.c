@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
+#include "../ServerPackets.h"
 #include "../entities/Track.h"
 #include "../tracks/TrackLoader.h"
 
@@ -104,6 +105,23 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
         boat_init(&state->players[i].boat, race_spawn_for_slot(i));
         state->players[i].lastActivityTime = 0;
         memset(&state->players[i].client_addr, 0, sizeof(state->players[i].client_addr));
+    }
+
+    /* Initialize coins: 8 groups of 8 coins near origin for testing */
+    state->coins_bits = 0; /* 0 -> none collected */
+    const float groupSpacing = 16.0f;
+    const float coinRadius = 8.0f;
+    Vector2f offsets[8] = {
+        { -12.f, -12.f }, { 0.f, -16.f }, { 12.f, -12.f }, { 16.f, 0.f },
+        { 12.f, 12.f }, { 0.f, 16.f }, { -12.f, 12.f }, { -16.f, 0.f }
+    };
+
+    for (int g = 0; g < 8; ++g) {
+        Vector2f basePos = { g * groupSpacing, 0.0f };
+        for (int c = 0; c < 8; ++c) {
+            int idx = g * 8 + c;
+            coin_init(&state->coins[idx], (Vector2f){ basePos.x + offsets[c].x, basePos.y + offsets[c].y }, coinRadius, idx);
+        }
     }
 }
 
@@ -381,6 +399,37 @@ void game_manager_resolve_collisions(GameState* state) {
             const float buoyRadius = track_buoys[j].radius;
 
             buoyCollision(&state->players[i].boat, buoyPos, buoyRadius);
+        }
+
+        /* Coin collisions */
+        for (int ci = 0; ci < 64; ++ci) {
+            Coin* coin = &state->coins[ci];
+            if (!coin->active) continue;
+
+            const float dx = coin->position.x - state->players[i].boat.position.x;
+            const float dy = coin->position.y - state->players[i].boat.position.y;
+            const float distSq = (dx * dx) + (dy * dy);
+            const float minDist = COLLIDER_RADIUS + coin->radius;
+            if (distSq < minDist * minDist && distSq > 0.0001f) {
+                /* collect coin */
+                coin->active = 0;
+                state->coins_bits |= (1ULL << (uint64_t)coin->index);
+
+                /* increase player's points */
+                state->players[i].boat.points += 100; /* coin value */
+
+                /* broadcast updated coins state to all players (we are already locked here) */
+                PacketCoinsState pkt;
+                pkt.type = MSG_COINS_STATE;
+                pkt.coins_bits = state->coins_bits;
+                for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                    if (state->players[pi].isActive) {
+                        sendto(state->listenfd_socket, &pkt, sizeof(pkt), 0,
+                               (struct sockaddr*)&state->players[pi].client_addr,
+                               sizeof(state->players[pi].client_addr));
+                    }
+                }
+            }
         }
     }
 }

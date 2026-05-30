@@ -187,6 +187,40 @@ void Renderer::renderTrack(float time) {
     const std::vector<Buoy>& buoys = gameManager->getTrack().getBuoys();
     const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
 
+    // Draw coins
+    const auto& coinGroups = gameManager->getCoinGroups();
+    sf::CircleShape coinOuterShape;
+    sf::CircleShape coinInnerShape;
+    coinOuterShape.setOutlineColor(sf::Color::Black);
+    coinOuterShape.setOutlineThickness(3.f);
+    coinInnerShape.setFillColor(sf::Color::Yellow);
+
+    for (const auto& group : coinGroups) {
+        for (const auto& coin : group) {
+            if (!coin.isActive()) continue;
+            const float radius = coin.getRadius();
+            sf::Vector2f screenPos = coin.getPosition() - cameraPosition + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
+            const float marginCoin = 50.0f;
+            if (screenPos.x < -marginCoin || screenPos.x > resolution.x + marginCoin ||
+                screenPos.y < -marginCoin || screenPos.y > resolution.y + marginCoin) {
+                continue;
+            }
+
+            coinOuterShape.setRadius(radius);
+            coinOuterShape.setOrigin({ radius, radius });
+            coinOuterShape.setPosition(screenPos);
+            coinOuterShape.setFillColor(sf::Color(255, 200, 0));
+
+            coinInnerShape.setRadius(radius * 0.55f);
+            coinInnerShape.setOrigin({ radius * 0.55f, radius * 0.55f });
+            coinInnerShape.setPosition(screenPos);
+            coinInnerShape.setFillColor(sf::Color(255, 220, 50));
+
+            window.draw(coinOuterShape);
+            window.draw(coinInnerShape);
+        }
+    }
+
     sf::CircleShape buoyShape;
     buoyShape.setOrigin({ 25.f, 25.f });
     buoyShape.setFillColor(sf::Color::Yellow);

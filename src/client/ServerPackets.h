@@ -28,6 +28,8 @@ enum MessageType : std::uint32_t {
     MSG_MOVE = 102,
     MSG_PLAYER_FINISHED = 103,
 
+    MSG_COINS_STATE = 200,
+
     MSG_I_AM_ALIVE = 999
 };
 
@@ -145,6 +147,11 @@ typedef struct {
     float time;
     int finishingPoints;
 } PacketPlayerFinished;
+
+typedef struct {
+    MessageType type;
+    std::uint64_t coins_bits;
+} PacketCoinsState;
 
 typedef struct {
     MessageType type;

@@ -221,8 +221,8 @@ int main() {
     std::cout << "[1][2][3][4] : Przestaw odpowiedni SPAWN na pozycje myszki\n";
     std::cout << "[G]          : Wyczysc wszystko\n";
     std::cout << "[SPACE]      : EKSPORT KODU C++ DO KONSOLI\n\n";
-    std::cout << "[O]          : OTWÓRZ trasę z folderu 'tracks'\n";
-    std::cout << "[M]          : USTAW bieżącą trasę jako active track (track.txt w katalogu Shipers, jeśli znaleziony)\n";
+    std::cout << "[O]          : OTWORZ trase z folderu 'tracks'\n";
+    std::cout << "[M]          : USTAW biezaca trase jako active track (track.txt w katalogu Shipers, jesli znaleziony)\n";
 
     while (window.isOpen()) {
         while (const std::optional<sf::Event> event = window.pollEvent()) {

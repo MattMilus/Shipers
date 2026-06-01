@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
+#include <stdlib.h>
+#include <ctype.h>
 #include "../ServerPackets.h"
 #include "../entities/Track.h"
 #include "../tracks/TrackLoader.h"
@@ -13,6 +15,92 @@ uint64_t now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return ((uint64_t)ts.tv_sec * 1000ULL) + ((uint64_t)ts.tv_nsec / 1000000ULL);
+}
+
+/*
+ * Try to load a textual config file 'config.txt' in the current working directory.
+ * Supported sections:
+ * TRACK <width> ... END
+ * BARRIER ... END
+ * FINISH x y
+ * SPAWNS ... END
+ * COINS ... END
+ * Returns 1 on success (config loaded), 0 otherwise. If outCoins/outCoinsCount provided
+ * they will be filled with malloc'ed array of Vector2f (caller must free).
+ */
+int try_load_config(GameState* state, Vector2f** outCoins, int* outCoinsCount) {
+    FILE* f = fopen("config.txt", "r");
+    if (!f) return 0;
+
+    char buf[512];
+    enum Section { NONE, TRACK, BARRIER, SPAWNS, COINS } section = NONE;
+    Vector2f* points = NULL; size_t pointsCap = 0; size_t pointsCount = 0;
+    Vector2f* coins = NULL; size_t coinsCap = 0; size_t coinsCount = 0;
+    float currentWidth = 150.0f;
+    /* Helper functions for C (no lambdas allowed) */
+    /* push a point into dynamic points array */
+    void config_push_point(Vector2f** pts, size_t* cap, size_t* cnt, float x, float y) {
+        if ((*cnt) + 1 > *cap) {
+            *cap = *cap ? (*cap) * 2 : 64;
+            *pts = realloc(*pts, (*cap) * sizeof(Vector2f));
+        }
+        (*pts)[*cnt].x = x; (*pts)[*cnt].y = y; (*cnt)++;
+    }
+    /* flush points as a track */
+    void config_flush_track(GameState* st, Vector2f* pts, size_t* cnt, float width) {
+        if (*cnt > 0) {
+            track_generate(pts, (size_t)(*cnt), width);
+            *cnt = 0;
+        }
+    }
+    /* flush points as a barrier */
+    void config_flush_barrier(GameState* st, Vector2f* pts, size_t* cnt) {
+        if (*cnt > 0) {
+            track_generate_barrier(pts, (size_t)(*cnt));
+            *cnt = 0;
+        }
+    }
+
+    while (fgets(buf, sizeof(buf), f)) {
+        // trim
+        char* s = buf;
+        while (*s && isspace((unsigned char)*s)) s++;
+        if (*s == '\0' || *s == '#') continue;
+
+        if (strncmp(s, "TRACK", 5) == 0) {
+            config_flush_barrier(state, points, &pointsCount); config_flush_track(state, points, &pointsCount, currentWidth); section = TRACK;
+            // parse width
+            float w = 150.0f; if (sscanf(s+5, "%f", &w) == 1) currentWidth = w;
+            continue;
+        }
+        if (strncmp(s, "BARRIER", 7) == 0) { config_flush_track(state, points, &pointsCount, currentWidth); config_flush_barrier(state, points, &pointsCount); section = BARRIER; continue; }
+        if (strncmp(s, "FINISH", 6) == 0) { float x,y; if (sscanf(s+6, "%f %f", &x, &y) == 2) { Vector2f p={x,y}; track_set_finish(p); } continue; }
+        if (strncmp(s, "SPAWNS", 6) == 0) { section = SPAWNS; pointsCount = 0; continue; }
+        if (strncmp(s, "COINS", 5) == 0) { section = COINS; coinsCount = 0; continue; }
+        if (strncmp(s, "END", 3) == 0) { if (section == TRACK) config_flush_track(state, points, &pointsCount, currentWidth); else if (section == BARRIER) config_flush_barrier(state, points, &pointsCount); else if (section == SPAWNS) { if (pointsCount>0) { track_set_spawns(points); pointsCount=0; } } section = NONE; continue; }
+
+        // parse coordinate line
+        float x,y; if (sscanf(s, "%f %f", &x, &y) != 2) continue;
+        if (section == TRACK || section == BARRIER || section == SPAWNS) {
+            config_push_point(&points, &pointsCap, &pointsCount, x, y);
+        } else if (section == COINS) {
+            if (coinsCount + 1 > coinsCap) { coinsCap = coinsCap ? coinsCap * 2 : 64; coins = realloc(coins, coinsCap * sizeof(Vector2f)); }
+            coins[coinsCount].x = x; coins[coinsCount].y = y; coinsCount++;
+        }
+    }
+
+    // flush remaining
+    if (pointsCount > 0) config_flush_track(state, points, &pointsCount, currentWidth);
+    if (coinsCount > 0) {
+        *outCoins = coins; *outCoinsCount = (int)coinsCount;
+    } else {
+        if (coins) free(coins);
+        *outCoins = NULL; *outCoinsCount = 0;
+    }
+
+    if (points) free(points);
+    fclose(f);
+    return 1;
 }
 
 static Vector2f race_spawn_for_slot(const int slot) {
@@ -92,7 +180,15 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
     state->winner_time = 0;
     state->race_start_ms = 0;
 
-    TrackLoader_loadTrack(TRACK_1);
+    // Try to load configuration from config.txt (if present). If not present, fall back to built-in tracks.
+    // The function will populate the track via track_generate* calls and optionally provide coin positions.
+    Vector2f* configCoins = NULL;
+    int configCoinCount = 0;
+    // Forward-declare loader function (implemented below)
+    int try_load_config(GameState* state, Vector2f** outCoins, int* outCoinsCount);
+    if (!try_load_config(state, &configCoins, &configCoinCount)) {
+        TrackLoader_loadTrack(TRACK_1);
+    }
 
     for (int i = 0; i < MAX_PLAYERS; i++) {
         state->players[i].isActive = 0;

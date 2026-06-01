@@ -103,6 +103,9 @@ public:
     bool hasBoat(int id);
     void removeBoat(int id);
 
+    // Load coin positions from external config (overwrites default positions)
+    void setCoinsFromConfig(const std::vector<sf::Vector2f>& coinPositions, float coinRadius = 8.0f);
+
 	void generateTrack(std::vector<sf::Vector2f> controlPoints, float trackWidth = 150.0f);
     void generateBarrier(std::vector<sf::Vector2f> controlPoints);
     void addFinish(sf::Vector2f finishPos);

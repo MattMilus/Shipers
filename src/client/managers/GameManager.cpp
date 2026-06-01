@@ -10,6 +10,8 @@
 #include "web_managers/ConnectionManager.h"
 #include "../ServerPackets.h"
 #include "../entities/Coin.h"
+#include <fstream>
+#include <sstream>
 
 namespace {
 std::string fallbackNicknameForId(const int id) {
@@ -501,4 +503,29 @@ void GameManager::setCoinCooldown(int coinIndex, float cooldown) {
         return;
     }
     coinCooldowns[coinIndex] = cooldown;
+}
+
+void GameManager::setCoinsFromConfig(const std::vector<sf::Vector2f>& coinPositions, float coinRadius) {
+    coinGroups.clear();
+    coinsState = 0;
+    coinCooldowns.fill(0);
+
+    int total = static_cast<int>(coinPositions.size());
+    int index = 0;
+    while (index < total) {
+        std::array<Coin, 8> group;
+        for (int c = 0; c < 8; ++c) {
+            int globalIndex = index;
+            if (globalIndex < total) {
+                group[c] = Coin(coinPositions[globalIndex], coinRadius, globalIndex);
+                group[c].setActive(true);
+            } else {
+                // fill remaining with dummy offscreen coins
+                group[c] = Coin(sf::Vector2f(10000.f, 10000.f), coinRadius, globalIndex);
+                group[c].setActive(false);
+            }
+            index++;
+        }
+        coinGroups.push_back(std::move(group));
+    }
 }

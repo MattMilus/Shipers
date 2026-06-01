@@ -63,7 +63,6 @@ sf::RenderWindow* Renderer::initialize() {
     loadShaders();
     loadTextures();
     loadSprites();
-
     if (!renderTex.resize(sf::Vector2u{ 800, 600 })) {
         std::cerr << "Failed to create/resize render texture\n";
     }
@@ -162,7 +161,17 @@ void Renderer::renderBackground(float time) {
 
     waveShader.setUniform("image", renderTex.getTexture());
     waveShader.setUniform("uTime", time);
-    waveShader.setUniformArray("uPathHistory", uPathHistory, TOTAL_HISTORY_SIZE);
+
+    // Adjust the camera entry in uPathHistory to account for zoom so shader and SFML
+    // remain in sync. Shader computes uv = p0*zoom + (uPathHistory[0]-0.5), which
+    // results in the screen center sampling at: uPathHistory[0] + 0.5*(zoom-1).
+    // To make the shader sample the actual camera position at the screen center,
+    // we send an adjusted uPathHistory[0] = camera_norm - 0.5*(zoom-1).
+    std::array<sf::Glsl::Vec2, TOTAL_HISTORY_SIZE> adjustedPathHistory;
+    for (int i = 0; i < TOTAL_HISTORY_SIZE; ++i) adjustedPathHistory[i] = uPathHistory[i];
+    float zoomOffset = 0.5f * (cameraZoom - 1.0f);
+    adjustedPathHistory[0] = sf::Glsl::Vec2(uPathHistory[0].x - zoomOffset, uPathHistory[0].y - zoomOffset);
+    waveShader.setUniformArray("uPathHistory", adjustedPathHistory.data(), TOTAL_HISTORY_SIZE);
     // persist zoom for SFML drawing
     this->cameraZoom = cameraZoom;
     waveShader.setUniform("uCameraZoom", cameraZoom);

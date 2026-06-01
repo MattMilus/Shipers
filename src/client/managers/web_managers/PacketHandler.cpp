@@ -228,6 +228,23 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
             gameManager->setCoinsState(coinsPacket.coins_bits);
             break;
         }
+        case MSG_COIN_RESPAWN: {
+            if (receivedSize != sizeof(PacketCoinRespawn)) break;
+            PacketCoinRespawn r;
+            std::memcpy(&r, buffer, sizeof(r));
+
+            // update coin position and active state
+            int idx = r.coin_index;
+            if (idx >= 0 && idx < 64) {
+                int g = idx / 8;
+                int c = idx % 8;
+                auto& coin = const_cast<Coin&>(gameManager->getCoinGroups()[g][c]);
+                coin.setPosition({r.x, r.y});
+                coin.setActive(true);
+                gameManager->setCoinCooldown(idx, r.cooldown_ms);
+            }
+            break;
+        }
         default:
             std::cerr << "Received unknown message: " << header->type << "\n";
             break;

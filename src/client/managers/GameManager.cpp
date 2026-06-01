@@ -46,6 +46,9 @@ GameManager::GameManager()
         }
         coinGroups.push_back(std::move(group));
     }
+
+    // initialize cooldowns map
+    coinCooldowns.fill(0);
 }
 
 sf::Vector2f GameManager::raceSpawnForId(const int id) const {
@@ -483,4 +486,18 @@ std::uint64_t GameManager::getCoinsState() const {
 
 const std::vector<std::array<Coin, 8>>& GameManager::getCoinGroups() const {
     return coinGroups;
+}
+
+float GameManager::getCoinCooldown(int coinIndex) const {
+    if (coinIndex < 0 || coinIndex >= coinCooldowns.size()) {
+        return 0.0f;
+    }
+    return coinCooldowns[coinIndex];
+}
+
+void GameManager::setCoinCooldown(int coinIndex, float cooldown) {
+    if (coinIndex < 0 || coinIndex >= coinCooldowns.size()) {
+        return;
+    }
+    coinCooldowns[coinIndex] = cooldown;
 }

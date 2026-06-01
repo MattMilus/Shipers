@@ -27,3 +27,7 @@ void Coin::setActive(bool a) {
 int Coin::getIndex() const {
     return index;
 }
+
+void Coin::setPosition(const sf::Vector2f& pos) {
+    position = pos;
+}

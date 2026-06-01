@@ -51,6 +51,7 @@ private:
     // Coins: 8 groups of 8 coins -> 64 bits
     std::vector<std::array<Coin, 8>> coinGroups;
     std::uint64_t coinsState;
+    std::array<uint32_t, 64> coinCooldowns; // ms remaining cooldown per coin on client
 
     int addPlayer(int id, sf::Vector2f startPos);
     sf::Vector2f raceSpawnForId(int id) const;
@@ -90,6 +91,9 @@ public:
     void setCoinsState(std::uint64_t bits);
     [[nodiscard]] std::uint64_t getCoinsState() const;
     [[nodiscard]] const std::vector<std::array<Coin, 8>>& getCoinGroups() const;
+
+    float getCoinCooldown(int coinIndex) const;
+    void setCoinCooldown(int coinIndex, float cooldown);
 
     void setUdpSocket(sf::UdpSocket* socket);
     sf::UdpSocket* getUdpSocket() const;

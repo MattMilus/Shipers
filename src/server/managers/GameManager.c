@@ -16,8 +16,6 @@ uint64_t now_ms(void) {
 }
 
 static Vector2f race_spawn_for_slot(const int slot) {
-    /*const Vector2f spawn = {300.0f + ((float)slot * 90.0f), 450.0f};
-    return spawn;*/
     return track_spawn_points[slot];
 }
 
@@ -121,6 +119,8 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
         for (int c = 0; c < 8; ++c) {
             int idx = g * 8 + c;
             coin_init(&state->coins[idx], (Vector2f){ basePos.x + offsets[c].x, basePos.y + offsets[c].y }, coinRadius, idx);
+            state->coins[idx].cooldown_until_ms = 0;
+            state->coins[idx].owner_player_id = -1;
         }
     }
 }
@@ -308,15 +308,17 @@ uint32_t game_manager_get_remaining_countdown_ms(GameState* state) {
     return remaining_ms;
 }
 
-void boatCollision(Boat* b1, Boat* b2) {
-    const float minDist = 2.0f * COLLIDER_RADIUS;
-    const float minDistSq = minDist * minDist;
+/* Collision between two players (have access to GameState to modify coins and broadcast) */
+static void playerBoatCollision(GameState* state, Player* p1, Player* p2) {
+    Boat* b1 = &p1->boat;
+    Boat* b2 = &p2->boat;
 
+    const float minDist = 2.0f * COLLIDER_RADIUS;
     const float dx = b2->position.x - b1->position.x;
     const float dy = b2->position.y - b1->position.y;
     const float distSq = (dx * dx) + (dy * dy);
 
-    if (distSq < minDistSq && distSq > 0.0001f) {
+    if (distSq < minDist * minDist && distSq > 0.0001f) {
         const float dist = sqrtf(distSq);
         const float nx = dx / dist;
         const float ny = dy / dist;
@@ -347,6 +349,150 @@ void boatCollision(Boat* b1, Boat* b2) {
         b1->velocity.y -= impulseY;
         b2->velocity.x += impulseX;
         b2->velocity.y += impulseY;
+
+        // Determine normal velocity components for each boat (approx using current velocities)
+        float v1n = (b1->velocity.x * nx) + (b1->velocity.y * ny);
+        float v2n = (b2->velocity.x * nx) + (b2->velocity.y * ny);
+
+        float velocityDifference = fabsf(v1n - v2n);
+
+        // Discrete drop rules
+        const float MIN_DIFF_VELOCITY = 50.0f;   // below -> no drops
+        const float MAX_DIFF_VELOCITY = 500.0f;  // above -> drop half of victim-owned
+        const float STEP = 50.0f;                // 1 coin per STEP above MIN
+        const uint32_t COOLDOWN_MS = 3000;       // respawn cooldown
+
+        if (velocityDifference < MIN_DIFF_VELOCITY) {
+            return; // no drops
+        }
+
+        // Identify attacker and victim by who has larger normal velocity
+        Player* attacker = (v1n > v2n) ? p1 : p2;
+        Player* victim = (v1n > v2n) ? p2 : p1;
+
+        int coinsToDrop = 0;
+        if (velocityDifference >= MAX_DIFF_VELOCITY) {
+            // drop half of victim-owned coins
+            int ownedCount = 0;
+            for (int ci = 0; ci < 64; ++ci) {
+                if (state->coins[ci].owner_player_id == victim->playerId && state->coins[ci].active == 0) {
+                    ownedCount++;
+                }
+            }
+            coinsToDrop = ownedCount / 2;
+        } else {
+            // discrete mapping: floor((diff - MIN)/STEP) + 1
+            float effective = velocityDifference - MIN_DIFF_VELOCITY;
+            coinsToDrop = (int)floorf(effective / STEP) + 1;
+        }
+
+        if (coinsToDrop <= 0) return;
+
+        // cap to available collected coins
+        int availableCollected = 0;
+        for (int ci = 0; ci < 64; ++ci) {
+            if (state->coins[ci].active == 0) availableCollected++;
+        }
+        if (coinsToDrop > availableCollected) coinsToDrop = availableCollected;
+
+        uint64_t now = now_ms();
+        int dropped = 0;
+
+        // First, try to respawn victim-owned coins
+        for (int ci = 0; ci < 64 && dropped < coinsToDrop; ++ci) {
+            Coin* coin = &state->coins[ci];
+            if (coin->owner_player_id == victim->playerId && coin->active == 0) {
+                // respawn coin near collision
+                float angle = ((float)dropped / (float)coinsToDrop) * 6.2831853f + 0.5f;
+                float radius = 20.0f + (dropped * 6.0f);
+                float cx = b1->position.x + cosf(angle) * radius;
+                float cy = b1->position.y + sinf(angle) * radius;
+
+                coin->position.x = cx;
+                coin->position.y = cy;
+                coin->active = 1;
+                coin->owner_player_id = -1;
+                coin->cooldown_until_ms = now + COOLDOWN_MS;
+
+                // clear collected bit
+                state->coins_bits &= ~(1ULL << (uint64_t)coin->index);
+
+                // deduct points from victim
+                victim->boat.points -= 100;
+                if (victim->boat.points < 0) victim->boat.points = 0;
+
+                // notify clients
+                PacketCoinRespawn respkt;
+                respkt.type = MSG_COIN_RESPAWN;
+                respkt.coin_index = coin->index;
+                respkt.x = coin->position.x;
+                respkt.y = coin->position.y;
+                respkt.cooldown_ms = COOLDOWN_MS;
+
+                for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                    if (state->players[pi].isActive) {
+                        sendto(state->listenfd_socket, &respkt, sizeof(respkt), 0,
+                               (struct sockaddr*)&state->players[pi].client_addr,
+                               sizeof(state->players[pi].client_addr));
+                    }
+                }
+
+                dropped++;
+            }
+        }
+
+        // If still need more, respawn any collected coins
+        for (int ci = 0; ci < 64 && dropped < coinsToDrop; ++ci) {
+            Coin* coin = &state->coins[ci];
+            if (coin->active == 0) {
+                float angle = ((float)dropped / (float)coinsToDrop) * 6.2831853f + 0.5f;
+                float radius = 20.0f + (dropped * 6.0f);
+                float cx = b1->position.x + cosf(angle) * radius;
+                float cy = b1->position.y + sinf(angle) * radius;
+
+                coin->position.x = cx;
+                coin->position.y = cy;
+                coin->active = 1;
+                coin->owner_player_id = -1;
+                coin->cooldown_until_ms = now + COOLDOWN_MS;
+
+                state->coins_bits &= ~(1ULL << (uint64_t)coin->index);
+
+                victim->boat.points -= 100;
+                if (victim->boat.points < 0) victim->boat.points = 0;
+
+                PacketCoinRespawn respkt;
+                respkt.type = MSG_COIN_RESPAWN;
+                respkt.coin_index = coin->index;
+                respkt.x = coin->position.x;
+                respkt.y = coin->position.y;
+                respkt.cooldown_ms = COOLDOWN_MS;
+
+                for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                    if (state->players[pi].isActive) {
+                        sendto(state->listenfd_socket, &respkt, sizeof(respkt), 0,
+                               (struct sockaddr*)&state->players[pi].client_addr,
+                               sizeof(state->players[pi].client_addr));
+                    }
+                }
+
+                dropped++;
+            }
+        }
+
+        if (dropped > 0) {
+            // broadcast updated coins bits
+            PacketCoinsState pkt;
+            pkt.type = MSG_COINS_STATE;
+            pkt.coins_bits = state->coins_bits;
+            for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                if (state->players[pi].isActive) {
+                    sendto(state->listenfd_socket, &pkt, sizeof(pkt), 0,
+                           (struct sockaddr*)&state->players[pi].client_addr,
+                           sizeof(state->players[pi].client_addr));
+                }
+            }
+        }
     }
 }
 
@@ -391,7 +537,7 @@ void game_manager_resolve_collisions(GameState* state) {
             if (!state->players[j].isActive) continue;
             if (state->players[j].isFinished) continue;
 
-            boatCollision(&state->players[i].boat, &state->players[j].boat);
+            playerBoatCollision(state, &state->players[i], &state->players[j]);
         }
 
         for (int j = 0; j < track_buoy_count; j++) {
@@ -411,8 +557,15 @@ void game_manager_resolve_collisions(GameState* state) {
             const float distSq = (dx * dx) + (dy * dy);
             const float minDist = COLLIDER_RADIUS + coin->radius;
             if (distSq < minDist * minDist && distSq > 0.0001f) {
+                uint64_t now = now_ms();
+                if (coin->cooldown_until_ms > now) {
+                    // coin is on cooldown, ignore collection
+                    continue;
+                }
+
                 /* collect coin */
                 coin->active = 0;
+                coin->owner_player_id = state->players[i].playerId; // set owner on collection
                 state->coins_bits |= (1ULL << (uint64_t)coin->index);
 
                 /* increase player's points */

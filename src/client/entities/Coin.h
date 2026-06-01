@@ -15,6 +15,8 @@ public:
     void setActive(bool a);
     [[nodiscard]] int getIndex() const;
 
+    void setPosition(const sf::Vector2f& pos);
+
 private:
     sf::Vector2f position;
     float radius;

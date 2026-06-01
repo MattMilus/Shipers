@@ -14,7 +14,8 @@
 Renderer::Renderer(GameManager* game_manager) 
     : gameManager(game_manager), 
       boatSprite(boatTexture),
-      resolution(800.f, 600.f) {
+      resolution(800.f, 600.f),
+      cameraZoom(1.0f) {
 }
 
 size_t Renderer::getPanelIdAt(const sf::Vector2f& pos) {
@@ -133,9 +134,38 @@ void Renderer::renderBackground(float time) {
     renderTex.draw(screenQuad, &checkerShader);
     renderTex.display();
 
+    // Calculate camera zoom based on local boat speed using a sigmoid mapping:
+    // zoom = baseZoom + sigmoid(normSpeed) * maxZoomRange
+    float cameraZoom = 1.0f;
+    {
+        const int playerID = gameManager->getPlayerId();
+        Boat* localBoat = gameManager->getBoatById(playerID);
+        if (localBoat != nullptr) {
+            // Tunable constants
+            const float MAX_SPEED = 600.0f; // speed value that maps to 1.0 normalized
+            const float SIGMOID_K = 12.0f;   // steepness
+            const float SIGMOID_MID = 0.5f;  // midpoint of normalized speed
+            const float BASE_ZOOM = 1.0f;    // minimum zoom (no zoom)
+            const float MAX_ZOOM_RANGE = 0.6f; // additional zoom at high speed
+
+            float speed = localBoat->getSpeed();
+            float norm = speed / MAX_SPEED;
+            if (norm < 0.f) norm = 0.f;
+            if (norm > 1.f) norm = 1.f;
+
+            float sig = 1.0f / (1.0f + std::exp(-SIGMOID_K * (norm - SIGMOID_MID)));
+            cameraZoom = BASE_ZOOM + sig * MAX_ZOOM_RANGE;
+        } else {
+            cameraZoom = 1.0f;
+        }
+    }
+
     waveShader.setUniform("image", renderTex.getTexture());
     waveShader.setUniform("uTime", time);
     waveShader.setUniformArray("uPathHistory", uPathHistory, TOTAL_HISTORY_SIZE);
+    // persist zoom for SFML drawing
+    this->cameraZoom = cameraZoom;
+    waveShader.setUniform("uCameraZoom", cameraZoom);
 
     window.clear();
     window.draw(screenQuad, &waveShader);
@@ -186,6 +216,7 @@ void Renderer::renderTrack(float time) {
 
     const std::vector<Buoy>& buoys = gameManager->getTrack().getBuoys();
     const sf::Vector2f cameraPosition = gameManager->getPlayer()->getPosition();
+    const float invZoom = 1.0f / cameraZoom;
 
     // Draw coins
     const auto& coinGroups = gameManager->getCoinGroups();
@@ -199,20 +230,21 @@ void Renderer::renderTrack(float time) {
         for (const auto& coin : group) {
             if (!coin.isActive()) continue;
             const float radius = coin.getRadius();
-            sf::Vector2f screenPos = coin.getPosition() - cameraPosition + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
+            // Apply zoom transform: scale world-space offset by invZoom around screen center
+            sf::Vector2f rel = coin.getPosition() - cameraPosition;
+            sf::Vector2f screenPos = rel * invZoom + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
             const float marginCoin = 50.0f;
             if (screenPos.x < -marginCoin || screenPos.x > resolution.x + marginCoin ||
                 screenPos.y < -marginCoin || screenPos.y > resolution.y + marginCoin) {
                 continue;
             }
-
-            coinOuterShape.setRadius(radius);
-            coinOuterShape.setOrigin({ radius, radius });
+            float drawRadius = radius * invZoom;
+            coinOuterShape.setRadius(drawRadius);
+            coinOuterShape.setOrigin({ drawRadius, drawRadius });
             coinOuterShape.setPosition(screenPos);
             coinOuterShape.setFillColor(sf::Color(255, 200, 0));
-
-            coinInnerShape.setRadius(radius * 0.55f);
-            coinInnerShape.setOrigin({ radius * 0.55f, radius * 0.55f });
+            coinInnerShape.setRadius(drawRadius * 0.55f);
+            coinInnerShape.setOrigin({ drawRadius * 0.55f, drawRadius * 0.55f });
             coinInnerShape.setPosition(screenPos);
             coinInnerShape.setFillColor(sf::Color(255, 220, 50));
 
@@ -232,13 +264,15 @@ void Renderer::renderTrack(float time) {
 
     for (const Buoy& buoy : buoys) {
         buoyRadiusOffset += 0.15f;
-        sf::Vector2f screenPos = buoy.position - cameraPosition + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
+        sf::Vector2f rel = buoy.position - cameraPosition;
+        sf::Vector2f screenPos = rel * invZoom + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
         if (screenPos.x < -margin || screenPos.x > resolution.x + margin ||
             screenPos.y < -margin || screenPos.y > resolution.y + margin) {
             continue;
             }
-
-        buoyShape.setRadius(buoy.radius * (0.75 + sin(time + buoyRadiusOffset) * 0.25));
+        float drawRadius = (buoy.radius * (0.75 + sin(time + buoyRadiusOffset) * 0.25)) * invZoom;
+        buoyShape.setRadius(drawRadius);
+        buoyShape.setOrigin({ drawRadius, drawRadius });
         buoyShape.setPosition(screenPos);
         window.draw(buoyShape);
     }
@@ -258,10 +292,15 @@ void Renderer::renderBoats() {
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
         if (boat->isFinished()) continue;
 
-        boatSprite.setPosition(
-            boat->getPosition() - localPlayer->getPosition()
-            + sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
-        );
+        // compute screen position with zoom
+        sf::Vector2f rel = boat->getPosition() - localPlayer->getPosition();
+        sf::Vector2f screenPos = rel * (1.0f / cameraZoom) + sf::Vector2f(resolution.x * 0.5f, resolution.y * 0.5f);
+
+        // scale sprite inversely to camera zoom so objects appear smaller when zoomed out
+        const float baseScaleX = 0.5f;
+        const float baseScaleY = 0.5f;
+        boatSprite.setScale({ baseScaleX * (1.0f / cameraZoom), baseScaleY * (1.0f / cameraZoom) });
+        boatSprite.setPosition(screenPos);
         boatSprite.setRotation(sf::degrees(boat->getCurrentAngle()));
         window.draw(boatSprite);
     }
@@ -283,47 +322,9 @@ void Renderer::render(float time) {
 }
 
 void Renderer::debug() {
-    if (ENV_APP_ENVIRONMENT != 1) return;
-    if (gameManager->getSessionPhase() != SessionPhase::Race) return;
-
-    Player* localPlayer = gameManager->getPlayer();
-    if (localPlayer == nullptr) {
-        return;
-    }
-
-    sf::CircleShape colliderCircle(COLLIDER_RADIUS);
-
-    // Determine the maximum points among active boats to normalize color
-    int maxPoints = 0;
-    for (const auto& [id, boat] : gameManager->getActiveBoats()) {
-        if (boat->isFinished()) continue;
-        maxPoints = std::max(maxPoints, boat->getPoints());
-    }
-
-    for (auto& [id, boat] : gameManager->getActiveBoats()) {
-        if (boat->isFinished()) continue;
-
-        colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
-        colliderCircle.setPosition(
-            boat->getPosition() - localPlayer->getPosition()
-            + sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
-        );
-
-        colliderCircle.setFillColor(sf::Color::Transparent);
-
-        // Compute color between red (no coins) and yellow (many coins).
-        // Red = (255, 0, 0), Yellow = (255, 255, 0).
-        float ratio = 0.0f;
-        if (maxPoints > 0) {
-            ratio = static_cast<float>(boat->getPoints()) / static_cast<float>(maxPoints);
-            if (ratio < 0.f) ratio = 0.f;
-            if (ratio > 1.f) ratio = 1.f;
-        }
-
-        unsigned char green = static_cast<unsigned char>(ratio * 255.0f);
-        colliderCircle.setOutlineColor(sf::Color(static_cast<unsigned char>(255), green, static_cast<unsigned char>(0)));
-        colliderCircle.setOutlineThickness(2.f);
-
-        window.draw(colliderCircle);
-    }
+    // Debug colliders are disabled for players in release overlay.
+    // Previously this function drew debug collider outlines per-boat.
+    // Kept intentionally empty to hide debug hitboxes for players.
+    (void)gameManager;
+    (void)resolution;
 }

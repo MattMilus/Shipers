@@ -97,6 +97,8 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
                     Boat* localBoat = gameManager->getBoatById(remoteId);
                     if (localBoat != nullptr) {
                         reconcileLocalBoat(*localBoat, snapshot);
+                        // Ensure local player's points are also synchronized from server
+                        localBoat->setPoints(snapshot.points);
                     }
                     continue;
                 }

@@ -40,6 +40,9 @@ private:
     sf::RenderTexture renderTex;
     sf::RectangleShape screenQuad;
 
+    // Current camera zoom applied to both shader sampling and SFML-drawn objects
+    float cameraZoom = 1.0f;
+
     std::vector<Panel> panels;
     std::function<void(sf::RenderWindow&)> overlayDrawer;
 

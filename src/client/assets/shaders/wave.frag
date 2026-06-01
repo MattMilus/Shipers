@@ -9,6 +9,7 @@ uniform float uTime;
 // --- Ripple Uniforms ---
 uniform vec2 uPathHistory[512];
 uniform int uPlayerId;
+uniform float uCameraZoom;
 
 // --- FBM Water Uniforms ---
 uniform float mulscale = 5.0;
@@ -68,7 +69,9 @@ void main() {
     pos.y = 1.0 - pos.y; // visual fix
     
     vec2 camera = uPathHistory[0] - vec2(0.5);
+    // Apply camera zoom (scale around camera position)
     pos += camera;
+    pos = (pos - camera) * uCameraZoom + camera;
 
     // 1. Calculate Distortions
     float x = sin(pos.y * 6.78 + uTime) * 0.05;

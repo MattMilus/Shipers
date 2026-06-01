@@ -388,17 +388,22 @@ static void playerBoatCollision(GameState* state, Player* p1, Player* p2) {
 
         if (coinsToDrop <= 0) return;
 
-        // cap to available collected coins
-        int availableCollected = 0;
+        // Only drop victim-owned collected coins. If victim has none, no drops occur.
+        int victimOwnedCount = 0;
         for (int ci = 0; ci < 64; ++ci) {
-            if (state->coins[ci].active == 0) availableCollected++;
+            if (state->coins[ci].owner_player_id == victim->playerId && state->coins[ci].active == 0) {
+                victimOwnedCount++;
+            }
         }
-        if (coinsToDrop > availableCollected) coinsToDrop = availableCollected;
+
+        if (victimOwnedCount <= 0) return; // victim has no collected coins -> nothing to drop
+
+        if (coinsToDrop > victimOwnedCount) coinsToDrop = victimOwnedCount;
 
         uint64_t now = now_ms();
         int dropped = 0;
 
-        // First, try to respawn victim-owned coins
+        // Respawn only victim-owned coins
         for (int ci = 0; ci < 64 && dropped < coinsToDrop; ++ci) {
             Coin* coin = &state->coins[ci];
             if (coin->owner_player_id == victim->playerId && coin->active == 0) {
@@ -441,45 +446,6 @@ static void playerBoatCollision(GameState* state, Player* p1, Player* p2) {
             }
         }
 
-        // If still need more, respawn any collected coins
-        for (int ci = 0; ci < 64 && dropped < coinsToDrop; ++ci) {
-            Coin* coin = &state->coins[ci];
-            if (coin->active == 0) {
-                float angle = ((float)dropped / (float)coinsToDrop) * 6.2831853f + 0.5f;
-                float radius = 20.0f + (dropped * 6.0f);
-                float cx = b1->position.x + cosf(angle) * radius;
-                float cy = b1->position.y + sinf(angle) * radius;
-
-                coin->position.x = cx;
-                coin->position.y = cy;
-                coin->active = 1;
-                coin->owner_player_id = -1;
-                coin->cooldown_until_ms = now + COOLDOWN_MS;
-
-                state->coins_bits &= ~(1ULL << (uint64_t)coin->index);
-
-                victim->boat.points -= 100;
-                if (victim->boat.points < 0) victim->boat.points = 0;
-
-                PacketCoinRespawn respkt;
-                respkt.type = MSG_COIN_RESPAWN;
-                respkt.coin_index = coin->index;
-                respkt.x = coin->position.x;
-                respkt.y = coin->position.y;
-                respkt.cooldown_ms = COOLDOWN_MS;
-
-                for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
-                    if (state->players[pi].isActive) {
-                        sendto(state->listenfd_socket, &respkt, sizeof(respkt), 0,
-                               (struct sockaddr*)&state->players[pi].client_addr,
-                               sizeof(state->players[pi].client_addr));
-                    }
-                }
-
-                dropped++;
-            }
-        }
-
         if (dropped > 0) {
             // broadcast updated coins bits
             PacketCoinsState pkt;
@@ -488,6 +454,35 @@ static void playerBoatCollision(GameState* state, Player* p1, Player* p2) {
             for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
                 if (state->players[pi].isActive) {
                     sendto(state->listenfd_socket, &pkt, sizeof(pkt), 0,
+                           (struct sockaddr*)&state->players[pi].client_addr,
+                           sizeof(state->players[pi].client_addr));
+                }
+            }
+            // Immediately broadcast updated player states so clients see points changes at once
+            PacketGameState statePkt;
+            statePkt.type = MSG_GAME_STATE;
+            statePkt.active_players_count = 0;
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                if (state->players[i].isActive) {
+                    PlayerSnapshot snap;
+                    snap.player_id = state->players[i].playerId;
+                    snap.x = state->players[i].boat.position.x;
+                    snap.y = state->players[i].boat.position.y;
+                    snap.currentAngle = state->players[i].boat.current_angle;
+                    snap.rotation = state->players[i].boat.rotation;
+                    snap.throttle = state->players[i].boat.throttle;
+                    snap.velocityX = state->players[i].boat.velocity.x;
+                    snap.velocityY = state->players[i].boat.velocity.y;
+                    snap.points = state->players[i].boat.points;
+
+                    statePkt.players[statePkt.active_players_count] = snap;
+                    statePkt.active_players_count++;
+                }
+            }
+
+            for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                if (state->players[pi].isActive) {
+                    sendto(state->listenfd_socket, &statePkt, sizeof(statePkt), 0,
                            (struct sockaddr*)&state->players[pi].client_addr,
                            sizeof(state->players[pi].client_addr));
                 }

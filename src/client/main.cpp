@@ -143,6 +143,8 @@ int main() {
         }
 
         if (gameManager->isConnectedToServer() && gameManager->getSessionPhase() == SessionPhase::Race) {
+            // Draw a small live scoreboard in the top-right corner during the race
+            scoreboard.drawLive(renderWindow, uiFont, gameManager->getPlayerId());
             return;
         }
 

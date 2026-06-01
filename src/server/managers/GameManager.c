@@ -460,8 +460,12 @@ static void playerBoatCollision(GameState* state, Player* p1, Player* p2) {
         const float ny = dy / dist;
 
         const float overlap = minDist - dist;
-        const float pushX = nx * (overlap * 0.5f);
-        const float pushY = ny * (overlap * 0.5f);
+        /* Apply smaller positional correction to avoid teleporting objects on collision.
+           A small fraction keeps objects from interpenetrating while letting velocities
+           resolve collision more naturally over subsequent ticks. */
+        const float positionPushFactor = 0.25f;
+        const float pushX = nx * (overlap * positionPushFactor);
+        const float pushY = ny * (overlap * positionPushFactor);
 
         b1->position.x -= pushX;
         b1->position.y -= pushY;
@@ -475,16 +479,37 @@ static void playerBoatCollision(GameState* state, Player* p1, Player* p2) {
 
         if (vn > 0.0f) return;
 
-        const float e = 1.0f;
-        const float impulse = -(1.0f + e) * vn * 0.5f;
+        /* Reduce bounciness and smooth velocity change: use smaller restitution
+           and blend the applied impulse so boats don't experience a harsh instant
+           velocity change. Also clamp impulse magnitude to avoid extreme spikes. */
+        const float e = 0.6f; /* restitution (0..1): lower -> less bouncy */
+        const float baseImpulse = -(1.0f + e) * vn * 0.5f;
 
-        const float impulseX = nx * impulse;
-        const float impulseY = ny * impulse;
+        float impulseX = nx * baseImpulse;
+        float impulseY = ny * baseImpulse;
 
-        b1->velocity.x -= impulseX;
-        b1->velocity.y -= impulseY;
-        b2->velocity.x += impulseX;
-        b2->velocity.y += impulseY;
+        /* Clamp impulse magnitude to avoid huge instantaneous velocity jumps */
+        const float MAX_IMPULSE = 300.0f; /* tunable */
+        float impMag = sqrtf(impulseX * impulseX + impulseY * impulseY);
+        if (impMag > MAX_IMPULSE && impMag > 0.0001f) {
+            float scale = MAX_IMPULSE / impMag;
+            impulseX *= scale;
+            impulseY *= scale;
+        }
+
+        /* Blend factor for applying impulse: 1.0 = full immediate change, lower -> smoother */
+        const float velBlend = 0.45f;
+        b1->velocity.x -= impulseX * velBlend;
+        b1->velocity.y -= impulseY * velBlend;
+        b2->velocity.x += impulseX * velBlend;
+        b2->velocity.y += impulseY * velBlend;
+
+        /* Apply a tiny damping so boats don't oscillate violently after collision */
+        const float POST_COLLISION_DAMPING = 0.02f;
+        b1->velocity.x *= (1.0f - POST_COLLISION_DAMPING);
+        b1->velocity.y *= (1.0f - POST_COLLISION_DAMPING);
+        b2->velocity.x *= (1.0f - POST_COLLISION_DAMPING);
+        b2->velocity.y *= (1.0f - POST_COLLISION_DAMPING);
 
         // Determine normal velocity components for each boat (approx using current velocities)
         float v1n = (b1->velocity.x * nx) + (b1->velocity.y * ny);

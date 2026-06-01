@@ -39,6 +39,16 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     target_link_libraries(ShipersServer m)
 
+    # Copy top-level track.txt (if present) into the server binary directory so the server
+    # will load the same track configuration at runtime. Overwrite existing file.
+    if(EXISTS "${CMAKE_SOURCE_DIR}/track.txt")
+        add_custom_command(TARGET ShipersServer POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_CURRENT_BINARY_DIR}/track.txt"
+                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/track.txt" "${CMAKE_CURRENT_BINARY_DIR}/track.txt"
+                COMMENT "Wymuszone kopiowanie track.txt do katalogu serwera (stary plik usuniety, nadpisanie)..."
+        )
+    endif()
+
 else()
     # --------------------------------------------------------
     # 2. Client
@@ -108,6 +118,16 @@ else()
     )
 
     add_dependencies(ShipersClient CopyShipersAssets)
+
+    # Copy top-level track.txt (if present) into the client binary directory so the client
+    # and editor will have access to the same track.txt. Overwrite existing file.
+    if(EXISTS "${CMAKE_SOURCE_DIR}/track.txt")
+        add_custom_command(TARGET ShipersClient POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_CURRENT_BINARY_DIR}/track.txt"
+                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/track.txt" "${CMAKE_CURRENT_BINARY_DIR}/track.txt"
+                COMMENT "Wymuszone kopiowanie track.txt do katalogu klienta (stary plik usuniety, nadpisanie)..."
+        )
+    endif()
 
     # --------------------------------------------------------
     # 3. Track Editor

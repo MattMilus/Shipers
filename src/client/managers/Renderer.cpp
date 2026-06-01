@@ -172,8 +172,19 @@ void Renderer::renderBackground(float time) {
     float zoomOffset = 0.5f * (cameraZoom - 1.0f);
     adjustedPathHistory[0] = sf::Glsl::Vec2(uPathHistory[0].x - zoomOffset, uPathHistory[0].y - zoomOffset);
     waveShader.setUniformArray("uPathHistory", adjustedPathHistory.data(), TOTAL_HISTORY_SIZE);
-    // persist zoom for SFML drawing
-    this->cameraZoom = cameraZoom;
+    // Smoothly interpolate the persisted camera zoom towards the target to avoid
+    // abrupt snap-backs on sudden stops (e.g. collisions). We use a simple
+    // exponential smoothing with time constant zoomSmoothTau.
+    float dt = 1.0f / 60.0f;
+    if (this->lastRenderTime >= 0.0f) {
+        dt = time - this->lastRenderTime;
+        if (dt <= 0.f || dt > 1.0f) dt = 1.0f / 60.0f;
+    }
+    this->lastRenderTime = time;
+
+    const float tau = this->zoomSmoothTau;
+    const float alpha = 1.0f - std::exp(-dt / std::max(1e-6f, tau));
+    this->cameraZoom += (cameraZoom - this->cameraZoom) * alpha;
     waveShader.setUniform("uCameraZoom", cameraZoom);
 
     window.clear();

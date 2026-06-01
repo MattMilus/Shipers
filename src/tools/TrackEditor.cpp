@@ -10,6 +10,11 @@
 namespace fs = std::filesystem;
 #endif
 #include <algorithm>
+#include <sstream>
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace fs = std::filesystem;
+#endif
 
 // Struktura przechowująca pojedynczą linię/trasę
 struct TrackPath {
@@ -40,6 +45,127 @@ sf::Vector2f normalize(const sf::Vector2f& source) {
     if (length != 0) return { source.x / length, source.y / length };
     return source;
 }
+
+#if __has_include(<filesystem>)
+static bool loadTrackFile(const fs::path& path,
+                          std::vector<TrackPath>& outPaths,
+                          sf::Vector2f& outFinish,
+                          std::vector<sf::Vector2f>& outSpawns,
+                          std::vector<std::array<sf::Vector2f,8>>& outCoinGroups,
+                          int& outNextCoinIndex) {
+    std::ifstream in(path.string());
+    if (!in.is_open()) return false;
+
+    outPaths.clear();
+    outSpawns.clear();
+    outCoinGroups.clear();
+    outCoinGroups.resize(8);
+    outNextCoinIndex = 0;
+
+    enum Section { NONE, TRACK, BARRIER, SPAWNS, COINS } section = NONE;
+    TrackPath currentPath;
+    std::string line;
+    while (std::getline(in, line)) {
+        // trim
+        size_t i = 0;
+        while (i < line.size() && isspace((unsigned char)line[i])) ++i;
+        if (i == line.size() || line[i] == '#') continue;
+        std::string s = line.substr(i);
+
+        if (s.rfind("TRACK", 0) == 0) {
+            if (section == TRACK || section == BARRIER) {
+                if (!currentPath.points.empty()) outPaths.push_back(currentPath);
+            }
+            section = TRACK;
+            currentPath.points.clear();
+            currentPath.isDouble = true;
+            currentPath.width = 150.0f;
+            float w; if (sscanf(s.c_str()+5, "%f", &w) == 1) currentPath.width = w;
+            continue;
+        }
+        if (s.rfind("BARRIER", 0) == 0) {
+            if (section == TRACK || section == BARRIER) {
+                if (!currentPath.points.empty()) outPaths.push_back(currentPath);
+            }
+            section = BARRIER;
+            currentPath.points.clear();
+            currentPath.isDouble = false;
+            continue;
+        }
+        if (s.rfind("FINISH", 0) == 0) {
+            float x,y; if (sscanf(s.c_str()+6, "%f %f", &x, &y) == 2) outFinish = {x,y};
+            continue;
+        }
+        if (s.rfind("SPAWNS", 0) == 0) { section = SPAWNS; continue; }
+        if (s.rfind("COINS", 0) == 0) { section = COINS; outNextCoinIndex = 0; continue; }
+        if (s.rfind("END", 0) == 0) { if (section == TRACK || section == BARRIER) { if (!currentPath.points.empty()) outPaths.push_back(currentPath); currentPath.points.clear(); } section = NONE; continue; }
+
+        // parse coordinate
+        float x,y; if (sscanf(s.c_str(), "%f %f", &x, &y) != 2) continue;
+        if (section == TRACK || section == BARRIER) {
+            currentPath.points.push_back({x,y});
+        } else if (section == SPAWNS) {
+            outSpawns.push_back({x,y});
+        } else if (section == COINS) {
+            int idx = outNextCoinIndex++;
+            if (idx < 64) {
+                int g = idx / 8; int c = idx % 8; outCoinGroups[g][c] = {x,y};
+            }
+        }
+    }
+
+    // if any dangling path
+    if (!currentPath.points.empty()) outPaths.push_back(currentPath);
+
+    // ensure at least 4 spawns
+    while (outSpawns.size() < 4) outSpawns.push_back({0.f,0.f});
+
+    in.close();
+    return true;
+}
+
+static bool writeTrackToPath(const fs::path& dst,
+                             const std::vector<TrackPath>& paths,
+                             const sf::Vector2f& finishPos,
+                             const std::vector<sf::Vector2f>& spawns,
+                             const std::vector<std::array<sf::Vector2f,8>>& coinGroups) {
+    std::ofstream out(dst.string(), std::ios::out | std::ios::trunc);
+    if (!out.is_open()) return false;
+
+    for (size_t p = 0; p < paths.size(); ++p) {
+        if (paths[p].points.empty()) continue;
+        if (paths[p].isDouble) {
+            out << "TRACK " << std::fixed << std::setprecision(1) << paths[p].width << "\n";
+            for (size_t i = 0; i < paths[p].points.size(); ++i) {
+                out << paths[p].points[i].x << " " << paths[p].points[i].y << "\n";
+            }
+            out << "END\n\n";
+        } else {
+            out << "BARRIER\n";
+            for (size_t i = 0; i < paths[p].points.size(); ++i) {
+                out << paths[p].points[i].x << " " << paths[p].points[i].y << "\n";
+            }
+            out << "END\n\n";
+        }
+    }
+
+    out << "FINISH " << std::fixed << std::setprecision(1) << finishPos.x << " " << finishPos.y << "\n\n";
+
+    out << "SPAWNS\n";
+    for (int i = 0; i < 4; ++i) out << spawns[i].x << " " << spawns[i].y << "\n";
+    out << "END\n\n";
+
+    out << "COINS\n";
+    for (size_t g = 0; g < coinGroups.size(); ++g) {
+        for (size_t c = 0; c < coinGroups[g].size(); ++c) {
+            out << std::fixed << std::setprecision(1) << coinGroups[g][c].x << " " << coinGroups[g][c].y << "\n";
+        }
+    }
+    out << "END\n";
+    out.close();
+    return true;
+}
+#endif
 
 int main() {
     sf::RenderWindow window(sf::VideoMode({1600, 900}), "Zaawansowany Edytor Trasy i Band");
@@ -95,6 +221,8 @@ int main() {
     std::cout << "[1][2][3][4] : Przestaw odpowiedni SPAWN na pozycje myszki\n";
     std::cout << "[G]          : Wyczysc wszystko\n";
     std::cout << "[SPACE]      : EKSPORT KODU C++ DO KONSOLI\n\n";
+    std::cout << "[O]          : OTWÓRZ trasę z folderu 'tracks'\n";
+    std::cout << "[M]          : USTAW bieżącą trasę jako active track (track.txt w katalogu Shipers, jeśli znaleziony)\n";
 
     while (window.isOpen()) {
         while (const std::optional<sf::Event> event = window.pollEvent()) {
@@ -216,6 +344,80 @@ int main() {
                     nextCoinIndex = (nextCoinIndex + 1) % 64;
                 }
 
+                // Open existing track from tracks/ folder
+                if (key->code == sf::Keyboard::Key::O) {
+#if __has_include(<filesystem>)
+                    std::error_code ec;
+                    fs::path tracksDir = fs::current_path(ec) / "tracks";
+                    if (!fs::exists(tracksDir, ec)) {
+                        std::cout << "Brak katalogu 'tracks' w katalogu roboczym.\n";
+                    } else {
+                        std::vector<fs::path> found;
+                        for (auto &p : fs::directory_iterator(tracksDir, ec)) {
+                            if (!ec && p.is_regular_file() && p.path().filename().string().rfind("track", 0) == 0 && p.path().extension() == ".txt") {
+                                found.push_back(p.path());
+                            }
+                        }
+                        if (found.empty()) {
+                            std::cout << "Brak plikow trackX.txt w katalogu 'tracks'.\n";
+                        } else {
+                            std::sort(found.begin(), found.end());
+                            std::cout << "Dostepne trasy:\n";
+                            for (size_t i = 0; i < found.size(); ++i) std::cout << i << ": " << found[i].string() << "\n";
+                            std::cout << "Wybierz indeks do wczytania (w konsoli): ";
+                            int sel = -1; std::cin >> sel;
+                            if (sel >= 0 && sel < (int)found.size()) {
+                                std::vector<TrackPath> loadedPaths;
+                                std::vector<sf::Vector2f> loadedSpawns;
+                                std::vector<std::array<sf::Vector2f,8>> loadedCoinGroups(8);
+                                int loadedNextCoin = 0;
+                                sf::Vector2f loadedFinish = finishPos;
+                                if (loadTrackFile(found[sel], loadedPaths, loadedFinish, loadedSpawns, loadedCoinGroups, loadedNextCoin)) {
+                                    paths = loadedPaths;
+                                    finishPos = loadedFinish;
+                                    spawnPoints = loadedSpawns;
+                                    coinGroups = loadedCoinGroups;
+                                    nextCoinIndex = loadedNextCoin % 64;
+                                    if (spawnPoints.size() < 4) spawnPoints.resize(4, {0.f,0.f});
+                                    std::cout << "Wczytano trase: " << found[sel].string() << "\n";
+                                } else {
+                                    std::cout << "Nie udalo sie wczytac pliku.\n";
+                                }
+                            } else {
+                                std::cout << "Nieprawidlowy indeks.\n";
+                            }
+                        }
+                    }
+#else
+                    std::cout << "Funkcja niedostepna - brak std::filesystem.\n";
+#endif
+                }
+
+                // Mark current editor content as active track (write Shipers/track.txt)
+                if (key->code == sf::Keyboard::Key::M) {
+#if __has_include(<filesystem>)
+                    std::error_code ec;
+                    fs::path cur = fs::current_path(ec);
+                    fs::path shipersPath;
+                    for (int up = 0; up < 4 && !cur.empty(); ++up) {
+                        if (cur.filename() == "Shipers") { shipersPath = cur; break; }
+                        cur = cur.parent_path();
+                    }
+                    if (shipersPath.empty()) {
+                        std::cout << "Nie znaleziono katalogu Shipers w rodzicach (do 3 poziomow).\n";
+                    } else {
+                        fs::path dst = shipersPath / "track.txt";
+                        if (writeTrackToPath(dst, paths, finishPos, spawnPoints, coinGroups)) {
+                            std::cout << "Ustawiono aktywna trase: " << dst.string() << "\n";
+                        } else {
+                            std::cout << "Nie udalo sie zapisac: " << dst.string() << "\n";
+                        }
+                    }
+#else
+                    std::cout << "Funkcja niedostepna - brak std::filesystem.\n";
+#endif
+                }
+
                 // ==========================================
                 // GENERATOR KODU
                 // ==========================================
@@ -282,6 +484,37 @@ int main() {
                         out << "END\n";
                         out.close();
                         std::cout << "Zapisano trase do: " << outPath << "\n";
+                        // Additionally try to locate a parent folder named "Shipers" up to 3 levels
+                        // and write/overwrite a file named "track.txt" directly into it.
+#if __has_include(<filesystem>)
+                        std::error_code ec2;
+                        fs::path cur = fs::current_path(ec2);
+                        fs::path shipersPath;
+                        for (int up = 0; up < 4 && !cur.empty(); ++up) {
+                            if (cur.filename() == "Shipers") {
+                                shipersPath = cur;
+                                break;
+                            }
+                            cur = cur.parent_path();
+                        }
+
+                        if (!shipersPath.empty()) {
+                            fs::path dst = shipersPath / "track.txt";
+                            // Overwrite existing file
+                            std::error_code copyEc;
+                            fs::copy_file(outPath, dst, fs::copy_options::overwrite_existing, copyEc);
+                            if (copyEc) {
+                                std::cout << "Nie udalo sie skopiowac track.txt do: " << dst.string() << " (" << copyEc.message() << ")\n";
+                            } else {
+                                std::cout << "Skopiowano track.txt do: " << dst.string() << "\n";
+                            }
+                        } else {
+                            // If not found, try one level up as fallback
+                            // (no-op if not desired)
+                        }
+#else
+                        (void)outPath; // no filesystem available
+#endif
                     }
                 }
             }

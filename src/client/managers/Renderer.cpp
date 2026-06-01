@@ -342,9 +342,28 @@ void Renderer::render(float time) {
 }
 
 void Renderer::debug() {
-    // Debug colliders are disabled for players in release overlay.
-    // Previously this function drew debug collider outlines per-boat.
-    // Kept intentionally empty to hide debug hitboxes for players.
-    (void)gameManager;
-    (void)resolution;
+    if (ENV_APP_ENVIRONMENT != 1) return;
+    if (gameManager->getSessionPhase() != SessionPhase::Race) return;
+
+    Player* localPlayer = gameManager->getPlayer();
+    if (localPlayer == nullptr) {
+        return;
+    }
+
+    sf::CircleShape colliderCircle(COLLIDER_RADIUS);
+
+    for (auto& [id, boat] : gameManager->getActiveBoats()) {
+        if (boat->isFinished()) continue;
+        colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
+        colliderCircle.setPosition(
+            boat->getPosition() - localPlayer->getPosition()
+            + sf::Glsl::Vec2(resolution.x * 0.5f, resolution.y * 0.5f)
+        );
+
+        colliderCircle.setFillColor(sf::Color::Transparent);
+        colliderCircle.setOutlineColor(sf::Color::Red);
+        colliderCircle.setOutlineThickness(2.f);
+
+        window.draw(colliderCircle);
+    }
 }

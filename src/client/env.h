@@ -9,7 +9,7 @@
 // Environments: 0 - Production, 1 - Debug
 #define ENV_PRODUCTION 0
 #define ENV_DEBUG 1
-#define ENV_APP_ENVIRONMENT ENV_DEBUG
+#define ENV_APP_ENVIRONMENT ENV_PRODUCTION
 
 #define ENV_SERVER_PORT 5000
 

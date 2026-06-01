@@ -29,7 +29,15 @@ uint64_t now_ms(void) {
  * they will be filled with malloc'ed array of Vector2f (caller must free).
  */
 int try_load_config(GameState* state, Vector2f** outCoins, int* outCoinsCount) {
-    FILE* f = fopen("config.txt", "r");
+    // Determine which track file to load. Prefer active_track.txt if present,
+    // which should contain the filename of the selected track (e.g. "track3.txt").
+    /* Simple behavior: server reads 'track.txt' placed next to the server executable (CWD).
+       If missing, fall back to 'track0.txt' in the same directory. This avoids searching
+       multiple project directories and keeps server behavior deterministic. */
+    FILE* f = fopen("track.txt", "r");
+    if (!f) {
+        f = fopen("track0.txt", "r");
+    }
     if (!f) return 0;
 
     char buf[512];
@@ -201,22 +209,54 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
         memset(&state->players[i].client_addr, 0, sizeof(state->players[i].client_addr));
     }
 
-    /* Initialize coins: 8 groups of 8 coins near origin for testing */
+    /* Initialize coins. If a config provided coin positions via track.txt (try_load_config),
+       use those positions. Otherwise fall back to the built-in test pattern. */
     state->coins_bits = 0; /* 0 -> none collected */
-    const float groupSpacing = 16.0f;
     const float coinRadius = 8.0f;
-    Vector2f offsets[8] = {
-        { -12.f, -12.f }, { 0.f, -16.f }, { 12.f, -12.f }, { 16.f, 0.f },
-        { 12.f, 12.f }, { 0.f, 16.f }, { -12.f, 12.f }, { -16.f, 0.f }
-    };
 
-    for (int g = 0; g < 8; ++g) {
-        Vector2f basePos = { g * groupSpacing, 0.0f };
-        for (int c = 0; c < 8; ++c) {
-            int idx = g * 8 + c;
-            coin_init(&state->coins[idx], (Vector2f){ basePos.x + offsets[c].x, basePos.y + offsets[c].y }, coinRadius, idx);
-            state->coins[idx].cooldown_until_ms = 0;
-            state->coins[idx].owner_player_id = -1;
+    if (configCoins != NULL && configCoinCount > 0) {
+        /* Initialize coins from config positions. Fill up to 64 coins; any remaining
+           slots are marked inactive and their bits set so clients treat them as unavailable. */
+        int useCount = configCoinCount;
+        if (useCount > 64) useCount = 64;
+
+        for (int i = 0; i < 64; ++i) {
+            if (i < useCount) {
+                coin_init(&state->coins[i], configCoins[i], coinRadius, i);
+                state->coins[i].cooldown_until_ms = 0;
+                state->coins[i].owner_player_id = -1;
+                /* ensure bit cleared (available) */
+                state->coins_bits &= ~(1ULL << (uint64_t)i);
+            } else {
+                /* mark unused coins as inactive/collected so they don't appear in-game */
+                state->coins[i].position = (Vector2f){0.0f, 0.0f};
+                state->coins[i].radius = coinRadius;
+                state->coins[i].active = 0;
+                state->coins[i].index = i;
+                state->coins[i].cooldown_until_ms = 0;
+                state->coins[i].owner_player_id = -1;
+                state->coins_bits |= (1ULL << (uint64_t)i);
+            }
+        }
+        free(configCoins);
+        configCoins = NULL;
+        configCoinCount = 0;
+    } else {
+        /* Default test pattern: 8 groups of 8 coins near origin */
+        const float groupSpacing = 16.0f;
+        Vector2f offsets[8] = {
+            { -12.f, -12.f }, { 0.f, -16.f }, { 12.f, -12.f }, { 16.f, 0.f },
+            { 12.f, 12.f }, { 0.f, 16.f }, { -12.f, 12.f }, { -16.f, 0.f }
+        };
+
+        for (int g = 0; g < 8; ++g) {
+            Vector2f basePos = { g * groupSpacing, 0.0f };
+            for (int c = 0; c < 8; ++c) {
+                int idx = g * 8 + c;
+                coin_init(&state->coins[idx], (Vector2f){ basePos.x + offsets[c].x, basePos.y + offsets[c].y }, coinRadius, idx);
+                state->coins[idx].cooldown_until_ms = 0;
+                state->coins[idx].owner_player_id = -1;
+            }
         }
     }
 }

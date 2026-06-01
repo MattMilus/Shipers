@@ -10,7 +10,14 @@
 #include <string>
 
 static bool tryLoadFromConfig(GameManager* gameManager) {
-    std::ifstream in("config.txt");
+    // Read active selection first if present
+    // Client reads 'track.txt' from its current working directory (next to exe).
+    // If not present, fall back to 'track0.txt'.
+    std::string trackFile = "track.txt";
+    std::ifstream in(trackFile);
+    if (!in.is_open()) {
+        in.open("track0.txt");
+    }
     if (!in.is_open()) return false;
 
     std::string line;

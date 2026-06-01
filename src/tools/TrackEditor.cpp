@@ -4,6 +4,11 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace fs = std::filesystem;
+#endif
 #include <algorithm>
 
 // Struktura przechowująca pojedynczą linię/trasę
@@ -55,6 +60,22 @@ int main() {
         {0.0f, -50.0f}, {50.0f, -50.0f}, {0.0f, 50.0f}, {50.0f, 50.0f}
     };
 
+    // Coin groups: 8 groups of 8 coins (always present in editor)
+    std::vector<std::array<sf::Vector2f,8>> coinGroups;
+    const float groupSpacing = 16.0f;
+    const std::array<sf::Vector2f,8> coinOffsets = {
+        sf::Vector2f(-12.f, -12.f), sf::Vector2f(0.f, -16.f), sf::Vector2f(12.f, -12.f), sf::Vector2f(16.f, 0.f),
+        sf::Vector2f(12.f, 12.f), sf::Vector2f(0.f, 16.f), sf::Vector2f(-12.f, 12.f), sf::Vector2f(-16.f, 0.f)
+    };
+    coinGroups.resize(8);
+    for (int g = 0; g < 8; ++g) {
+        sf::Vector2f basePos(static_cast<float>(g) * groupSpacing, 0.f);
+        for (int c = 0; c < 8; ++c) {
+            coinGroups[g][c] = basePos + coinOffsets[c];
+        }
+    }
+    int nextCoinIndex = 0; // 0..63 next coin to assign with C
+
     int segmentsPerCurve = 20;
     int draggedPathIndex = -1;
     int draggedPointIndex = -1;
@@ -72,7 +93,7 @@ int main() {
     std::cout << "[Z] / [X]    : ZMNIEJSZ / ZWIEKSZ szerokosc aktywnej trasy\n";
     std::cout << "[F]          : Przestaw METE\n";
     std::cout << "[1][2][3][4] : Przestaw odpowiedni SPAWN na pozycje myszki\n";
-    std::cout << "[C]          : Wyczysc wszystko\n";
+    std::cout << "[G]          : Wyczysc wszystko\n";
     std::cout << "[SPACE]      : EKSPORT KODU C++ DO KONSOLI\n\n";
 
     while (window.isOpen()) {
@@ -97,7 +118,7 @@ int main() {
                     } else {
                         float catchRadius = 15.0f * zoomLevel;
                         bool caught = false;
-
+                        // coins are positioned via the C key; no direct dragging
                         for (size_t p = 0; p < paths.size(); ++p) {
                             for (size_t i = 0; i < paths[p].points.size(); ++i) {
                                 if (std::hypot(paths[p].points[i].x - mouseWorldPos.x, paths[p].points[i].y - mouseWorldPos.y) < catchRadius) {
@@ -120,6 +141,7 @@ int main() {
                 else if (mouseBtn->button == sf::Mouse::Button::Right) {
                     float catchRadius = 15.0f * zoomLevel;
                     bool deleted = false;
+                    // Right-click on coins: reset to offscreen? We will allow removing by moving far away
                     for (size_t p = 0; p < paths.size(); ++p) {
                         for (auto it = paths[p].points.begin(); it != paths[p].points.end(); ++it) {
                             if (std::hypot(it->x - mouseWorldPos.x, it->y - mouseWorldPos.y) < catchRadius) {
@@ -176,7 +198,7 @@ int main() {
                         paths[activePathIndex].isDouble = !paths[activePathIndex].isDouble;
                     }
                 }
-                if (key->code == sf::Keyboard::Key::C) {
+                if (key->code == sf::Keyboard::Key::G) {
                     paths.clear();
                     paths.push_back({ {}, true, 150.0f });
                     activePathIndex = 0;
@@ -185,72 +207,82 @@ int main() {
                     editFinishMode = true;
                 }
 
+                // Assign coins sequentially with C: place next coin at mouse position
+                if (key->code == sf::Keyboard::Key::C) {
+                    int g = nextCoinIndex / 8;
+                    int c = nextCoinIndex % 8;
+                    coinGroups[g][c] = mouseWorldPos;
+                    std::cout << "Set coin " << nextCoinIndex << " to (" << coinGroups[g][c].x << ", " << coinGroups[g][c].y << ")\n";
+                    nextCoinIndex = (nextCoinIndex + 1) % 64;
+                }
+
                 // ==========================================
                 // GENERATOR KODU
                 // ==========================================
                 if (key->code == sf::Keyboard::Key::Space) {
-                    std::cout << "\n======================================================\n";
-                    std::cout << "               SKOPIUJ KOD PONIZEJ\n";
-                    std::cout << "======================================================\n\n";
-
-                    // --- KOD DLA SERWERA (C) ---
-                    std::cout << "/// --- KOD DLA SERWERA (C - main.c / GameManager.c) ---\n";
-                    for (size_t p = 0; p < paths.size(); ++p) {
-                        if (paths[p].points.empty()) continue;
-
-                        std::cout << "const Vector2f control_points" << (p + 1) << "[] = {\n";
-                        for (size_t i = 0; i < paths[p].points.size(); ++i) {
-                            std::cout << "    {" << std::fixed << std::setprecision(1) << paths[p].points[i].x << "f, " << paths[p].points[i].y << "f}";
-                            if (i < paths[p].points.size() - 1) std::cout << ",\n";
-                            else std::cout << "\n";
-                        }
-                        std::cout << "};\n";
-
-                        if (paths[p].isDouble) {
-                            std::cout << "track_generate(control_points" << (p + 1) << ", " << paths[p].points.size() << ", " << paths[p].width << "f);\n\n";
-                        } else {
-                            std::cout << "track_generate_barrier(control_points" << (p + 1) << ", " << paths[p].points.size() << ");\n\n";
-                        }
+                    // Export to next available trackX.txt (smallest unused index)
+                    // find smallest unused filename trackX.txt inside local "tracks" folder
+                    std::string tracksDir = "tracks";
+#if __has_include(<filesystem>)
+                    std::error_code ec;
+                    if (!fs::exists(tracksDir, ec)) {
+                        fs::create_directories(tracksDir, ec);
                     }
-                    std::cout << "const Vector2f finish_pos = {" << std::fixed << std::setprecision(1) << finishPos.x << "f, " << finishPos.y << "f};\n";
-                    std::cout << "track_set_finish(finish_pos);\n\n";
-
-                    std::cout << "const Vector2f spawn_pos[] = {\n";
-                    for (int i = 0; i < 4; ++i) {
-                        std::cout << "    {" << std::fixed << std::setprecision(1) << spawnPoints[i].x << "f, " << spawnPoints[i].y << "f}";
-                        if (i < 3) std::cout << ",\n"; else std::cout << "\n";
+#else
+                    // Best-effort: attempt directory creation is platform dependent; assume tracksDir is okay.
+#endif
+                    int idx = 0;
+                    std::string outName;
+                    std::string outPath;
+                    while (true) {
+                        outName = "track" + std::to_string(idx) + ".txt";
+                        outPath = tracksDir + "/" + outName;
+                        std::ifstream fin(outPath);
+                        if (!fin.is_open()) break;
+                        fin.close();
+                        idx++;
                     }
-                    std::cout << "};\n";
-                    std::cout << "track_set_spawns(spawn_pos);\n\n";
-
-                    // --- KOD DLA KLIENTA (C++) ---
-                    std::cout << "/// --- KOD DLA KLIENTA (C++ - main.cpp / GameManager.cpp) ---\n";
-                    for (size_t p = 0; p < paths.size(); ++p) {
-                        if (paths[p].points.empty()) continue;
-
-                        if (paths[p].isDouble) std::cout << "gameManager->generateTrack({\n";
-                        else std::cout << "gameManager->generateBarrier({\n";
-
-                        for (size_t i = 0; i < paths[p].points.size(); ++i) {
-                            std::cout << "    {" << std::fixed << std::setprecision(1) << paths[p].points[i].x << "f, " << paths[p].points[i].y << "f}";
-                            if (i < paths[p].points.size() - 1) std::cout << ",\n";
-                            else std::cout << "\n";
+                    std::ofstream out(outPath, std::ios::out | std::ios::trunc);
+                    if (!out.is_open()) {
+                        std::cout << "Nie mozna utworzyc pliku: " << outName << "\n";
+                    } else {
+                        // write paths: TRACK or BARRIER sections
+                        for (size_t p = 0; p < paths.size(); ++p) {
+                            if (paths[p].points.empty()) continue;
+                            if (paths[p].isDouble) {
+                                out << "TRACK " << std::fixed << std::setprecision(1) << paths[p].width << "\n";
+                                for (size_t i = 0; i < paths[p].points.size(); ++i) {
+                                    out << paths[p].points[i].x << " " << paths[p].points[i].y << "\n";
+                                }
+                                out << "END\n\n";
+                            } else {
+                                out << "BARRIER\n";
+                                for (size_t i = 0; i < paths[p].points.size(); ++i) {
+                                    out << paths[p].points[i].x << " " << paths[p].points[i].y << "\n";
+                                }
+                                out << "END\n\n";
+                            }
                         }
 
-                        if (paths[p].isDouble) std::cout << "}, " << paths[p].width << "f);\n\n";
-                        else std::cout << "});\n\n";
+                        // finish
+                        out << "FINISH " << std::fixed << std::setprecision(1) << finishPos.x << " " << finishPos.y << "\n\n";
+
+                        // spawns
+                        out << "SPAWNS\n";
+                        for (int i = 0; i < 4; ++i) out << spawnPoints[i].x << " " << spawnPoints[i].y << "\n";
+                        out << "END\n\n";
+
+                        // coins: write all 8*8 positions in order
+                        out << "COINS\n";
+                        for (size_t g = 0; g < coinGroups.size(); ++g) {
+                            for (size_t c = 0; c < coinGroups[g].size(); ++c) {
+                                out << std::fixed << std::setprecision(1) << coinGroups[g][c].x << " " << coinGroups[g][c].y << "\n";
+                            }
+                        }
+                        out << "END\n";
+                        out.close();
+                        std::cout << "Zapisano trase do: " << outPath << "\n";
                     }
-
-                    std::cout << "gameManager->addFinish({" << std::fixed << std::setprecision(1) << finishPos.x << "f, " << finishPos.y << "f});\n\n";
-
-                    std::cout << "gameManager->setSpawnPoints({\n";
-                    for (int i = 0; i < 4; ++i) {
-                        std::cout << "    {" << std::fixed << std::setprecision(1) << spawnPoints[i].x << "f, " << spawnPoints[i].y << "f}";
-                        if (i < 3) std::cout << ",\n"; else std::cout << "\n";
-                    }
-                    std::cout << "});\n\n";
-
-                    std::cout << "======================================================\n\n";
                 }
             }
         }
@@ -361,6 +393,19 @@ int main() {
             spawnShape.setPosition(spawnPoints[i]);
             spawnShape.setFillColor(sf::Color::Cyan);
             window.draw(spawnShape);
+        }
+
+        // Rysowanie grup monet (8 grup x 8 monet)
+        for (size_t g = 0; g < coinGroups.size(); ++g) {
+            for (size_t c = 0; c < coinGroups[g].size(); ++c) {
+                sf::CircleShape coinOuter(10.0f * zoomLevel);
+                coinOuter.setOrigin({coinOuter.getRadius(), coinOuter.getRadius()});
+                coinOuter.setPosition(coinGroups[g][c]);
+                coinOuter.setFillColor(sf::Color(255, 200, 0));
+                coinOuter.setOutlineColor(sf::Color::Black);
+                coinOuter.setOutlineThickness(2.0f * zoomLevel);
+                window.draw(coinOuter);
+            }
         }
 
         window.display();

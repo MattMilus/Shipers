@@ -115,6 +115,8 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
                 remoteBoat->setTargetVelocity(sf::Vector2f(snapshot.velocityX, snapshot.velocityY));
                 remoteBoat->setRotation(snapshot.rotation);
                 remoteBoat->setThrottle(snapshot.throttle);
+                // Update points immediately so UI/debug reflects coin collection in real-time
+                remoteBoat->setPoints(snapshot.points);
             }
             break;
         }

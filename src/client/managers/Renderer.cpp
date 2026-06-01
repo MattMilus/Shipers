@@ -293,8 +293,16 @@ void Renderer::debug() {
 
     sf::CircleShape colliderCircle(COLLIDER_RADIUS);
 
+    // Determine the maximum points among active boats to normalize color
+    int maxPoints = 0;
+    for (const auto& [id, boat] : gameManager->getActiveBoats()) {
+        if (boat->isFinished()) continue;
+        maxPoints = std::max(maxPoints, boat->getPoints());
+    }
+
     for (auto& [id, boat] : gameManager->getActiveBoats()) {
         if (boat->isFinished()) continue;
+
         colliderCircle.setOrigin({ COLLIDER_RADIUS, COLLIDER_RADIUS });
         colliderCircle.setPosition(
             boat->getPosition() - localPlayer->getPosition()
@@ -302,7 +310,18 @@ void Renderer::debug() {
         );
 
         colliderCircle.setFillColor(sf::Color::Transparent);
-        colliderCircle.setOutlineColor(sf::Color::Red);
+
+        // Compute color between red (no coins) and yellow (many coins).
+        // Red = (255, 0, 0), Yellow = (255, 255, 0).
+        float ratio = 0.0f;
+        if (maxPoints > 0) {
+            ratio = static_cast<float>(boat->getPoints()) / static_cast<float>(maxPoints);
+            if (ratio < 0.f) ratio = 0.f;
+            if (ratio > 1.f) ratio = 1.f;
+        }
+
+        unsigned char green = static_cast<unsigned char>(ratio * 255.0f);
+        colliderCircle.setOutlineColor(sf::Color(static_cast<unsigned char>(255), green, static_cast<unsigned char>(0)));
         colliderCircle.setOutlineThickness(2.f);
 
         window.draw(colliderCircle);

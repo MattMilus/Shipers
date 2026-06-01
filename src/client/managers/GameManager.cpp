@@ -124,6 +124,7 @@ void GameManager::startGame(char* buffer, const std::size_t receivedSize) {
             boat->setTargetVelocity(velocity);
             boat->setRotation(snapshot.rotation);
             boat->setThrottle(snapshot.throttle);
+            boat->setPoints(snapshot.points);
         }
     }
 }

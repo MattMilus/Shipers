@@ -9,6 +9,9 @@
 #include "SFML/Network/Socket.hpp"
 #include "web_managers/ConnectionManager.h"
 #include "../ServerPackets.h"
+#include "../entities/Coin.h"
+#include <fstream>
+#include <sstream>
 
 namespace {
 std::string fallbackNicknameForId(const int id) {
@@ -24,6 +27,30 @@ GameManager::GameManager()
       connectedToServer(false),
       updSocket(nullptr),
       serverIpAddress(sf::IpAddress::resolve("127.0.0.1").value()) {
+    // initialize coins: 8 groups of 8 coins, placed near origin for testing
+    coinsState = 0; // 0 => none collected
+    coinGroups.reserve(8);
+    const float groupSpacing = 16.0f;
+    const float coinRadius = 8.0f;
+    // personal offsets for 8 coins around a small circle
+    std::array<sf::Vector2f, 8> offsets = {
+        sf::Vector2f(-12.f, -12.f), sf::Vector2f(0.f, -16.f), sf::Vector2f(12.f, -12.f), sf::Vector2f(16.f, 0.f),
+        sf::Vector2f(12.f, 12.f), sf::Vector2f(0.f, 16.f), sf::Vector2f(-12.f, 12.f), sf::Vector2f(-16.f, 0.f)
+    };
+
+    for (int g = 0; g < 8; ++g) {
+        std::array<Coin, 8> group;
+        sf::Vector2f basePos(static_cast<float>(g) * groupSpacing, 0.f);
+        for (int c = 0; c < 8; ++c) {
+            int globalIndex = g * 8 + c;
+            group[c] = Coin(basePos + offsets[c], coinRadius, globalIndex);
+            group[c].setActive(true);
+        }
+        coinGroups.push_back(std::move(group));
+    }
+
+    // initialize cooldowns map
+    coinCooldowns.fill(0);
 }
 
 sf::Vector2f GameManager::raceSpawnForId(const int id) const {
@@ -99,6 +126,7 @@ void GameManager::startGame(char* buffer, const std::size_t receivedSize) {
             boat->setTargetVelocity(velocity);
             boat->setRotation(snapshot.rotation);
             boat->setThrottle(snapshot.throttle);
+            boat->setPoints(snapshot.points);
         }
     }
 }
@@ -441,4 +469,63 @@ void GameManager::localPlayerFinished() {
 
 void GameManager::setPlayerTime(int id, float time) const {
     this->getBoatById(id)->setRaceTime(time);
+}
+
+void GameManager::setCoinsState(std::uint64_t bits) {
+    coinsState = bits;
+    // bit == 1 -> collected, so active = !collected
+    for (size_t g = 0; g < coinGroups.size(); ++g) {
+        for (size_t c = 0; c < coinGroups[g].size(); ++c) {
+            int globalIndex = static_cast<int>(g * 8 + c);
+            bool collected = ((bits >> globalIndex) & 1ULL) != 0ULL;
+            coinGroups[g][c].setActive(!collected);
+        }
+    }
+}
+
+std::uint64_t GameManager::getCoinsState() const {
+    return coinsState;
+}
+
+const std::vector<std::array<Coin, 8>>& GameManager::getCoinGroups() const {
+    return coinGroups;
+}
+
+float GameManager::getCoinCooldown(int coinIndex) const {
+    if (coinIndex < 0 || coinIndex >= coinCooldowns.size()) {
+        return 0.0f;
+    }
+    return coinCooldowns[coinIndex];
+}
+
+void GameManager::setCoinCooldown(int coinIndex, float cooldown) {
+    if (coinIndex < 0 || coinIndex >= coinCooldowns.size()) {
+        return;
+    }
+    coinCooldowns[coinIndex] = cooldown;
+}
+
+void GameManager::setCoinsFromConfig(const std::vector<sf::Vector2f>& coinPositions, float coinRadius) {
+    coinGroups.clear();
+    coinsState = 0;
+    coinCooldowns.fill(0);
+
+    int total = static_cast<int>(coinPositions.size());
+    int index = 0;
+    while (index < total) {
+        std::array<Coin, 8> group;
+        for (int c = 0; c < 8; ++c) {
+            int globalIndex = index;
+            if (globalIndex < total) {
+                group[c] = Coin(coinPositions[globalIndex], coinRadius, globalIndex);
+                group[c].setActive(true);
+            } else {
+                // fill remaining with dummy offscreen coins
+                group[c] = Coin(sf::Vector2f(10000.f, 10000.f), coinRadius, globalIndex);
+                group[c].setActive(false);
+            }
+            index++;
+        }
+        coinGroups.push_back(std::move(group));
+    }
 }

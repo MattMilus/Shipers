@@ -97,6 +97,8 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
                     Boat* localBoat = gameManager->getBoatById(remoteId);
                     if (localBoat != nullptr) {
                         reconcileLocalBoat(*localBoat, snapshot);
+                        // Ensure local player's points are also synchronized from server
+                        localBoat->setPoints(snapshot.points);
                     }
                     continue;
                 }
@@ -115,6 +117,8 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
                 remoteBoat->setTargetVelocity(sf::Vector2f(snapshot.velocityX, snapshot.velocityY));
                 remoteBoat->setRotation(snapshot.rotation);
                 remoteBoat->setThrottle(snapshot.throttle);
+                // Update points immediately so UI/debug reflects coin collection in real-time
+                remoteBoat->setPoints(snapshot.points);
             }
             break;
         }
@@ -215,6 +219,33 @@ void PacketHandler::handleIncomingPacket(char* buffer, const std::size_t receive
 
             if (finishedPacket.player_id == gameManager->getPlayerId()) {
                 gameManager->localPlayerFinished();
+            }
+            break;
+        }
+        case MSG_COINS_STATE: {
+            if (receivedSize != sizeof(PacketCoinsState)) {
+                break;
+            }
+
+            PacketCoinsState coinsPacket{};
+            std::memcpy(&coinsPacket, buffer, sizeof(PacketCoinsState));
+            gameManager->setCoinsState(coinsPacket.coins_bits);
+            break;
+        }
+        case MSG_COIN_RESPAWN: {
+            if (receivedSize != sizeof(PacketCoinRespawn)) break;
+            PacketCoinRespawn r;
+            std::memcpy(&r, buffer, sizeof(r));
+
+            // update coin position and active state
+            int idx = r.coin_index;
+            if (idx >= 0 && idx < 64) {
+                int g = idx / 8;
+                int c = idx % 8;
+                auto& coin = const_cast<Coin&>(gameManager->getCoinGroups()[g][c]);
+                coin.setPosition({r.x, r.y});
+                coin.setActive(true);
+                gameManager->setCoinCooldown(idx, r.cooldown_ms);
             }
             break;
         }

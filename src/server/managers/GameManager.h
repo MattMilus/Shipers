@@ -13,6 +13,7 @@
 
 #include "../entities/Boat.h"
 #include "../entities/Track.h"
+#include "../entities/Coin.h"
 
 #define MAX_PLAYERS 4
 #define GAME_START_COUNTDOWN_MS 5000
@@ -42,6 +43,10 @@ typedef struct {
 typedef struct {
     Player players[MAX_PLAYERS];
     int current_player_count;
+
+    // Coins: 8 groups * 8 coins = 64
+    Coin coins[64];
+    uint64_t coins_bits; // bit == 1 -> collected
 
     int listenfd_socket;
     GamePhase phase;

@@ -5,6 +5,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include "../ServerPackets.h"
 #include "../entities/Track.h"
 #include "../tracks/TrackLoader.h"
 
@@ -14,9 +17,101 @@ uint64_t now_ms(void) {
     return ((uint64_t)ts.tv_sec * 1000ULL) + ((uint64_t)ts.tv_nsec / 1000000ULL);
 }
 
+/*
+ * Try to load a textual config file 'config.txt' in the current working directory.
+ * Supported sections:
+ * TRACK <width> ... END
+ * BARRIER ... END
+ * FINISH x y
+ * SPAWNS ... END
+ * COINS ... END
+ * Returns 1 on success (config loaded), 0 otherwise. If outCoins/outCoinsCount provided
+ * they will be filled with malloc'ed array of Vector2f (caller must free).
+ */
+int try_load_config(GameState* state, Vector2f** outCoins, int* outCoinsCount) {
+    // Determine which track file to load. Prefer active_track.txt if present,
+    // which should contain the filename of the selected track (e.g. "track3.txt").
+    /* Simple behavior: server reads 'track.txt' placed next to the server executable (CWD).
+       If missing, fall back to 'track0.txt' in the same directory. This avoids searching
+       multiple project directories and keeps server behavior deterministic. */
+    FILE* f = fopen("track.txt", "r");
+    if (!f) {
+        f = fopen("track0.txt", "r");
+    }
+    if (!f) return 0;
+
+    char buf[512];
+    enum Section { NONE, TRACK, BARRIER, SPAWNS, COINS } section = NONE;
+    Vector2f* points = NULL; size_t pointsCap = 0; size_t pointsCount = 0;
+    Vector2f* coins = NULL; size_t coinsCap = 0; size_t coinsCount = 0;
+    float currentWidth = 150.0f;
+    /* Helper functions for C (no lambdas allowed) */
+    /* push a point into dynamic points array */
+    void config_push_point(Vector2f** pts, size_t* cap, size_t* cnt, float x, float y) {
+        if ((*cnt) + 1 > *cap) {
+            *cap = *cap ? (*cap) * 2 : 64;
+            *pts = realloc(*pts, (*cap) * sizeof(Vector2f));
+        }
+        (*pts)[*cnt].x = x; (*pts)[*cnt].y = y; (*cnt)++;
+    }
+    /* flush points as a track */
+    void config_flush_track(GameState* st, Vector2f* pts, size_t* cnt, float width) {
+        if (*cnt > 0) {
+            track_generate(pts, (size_t)(*cnt), width);
+            *cnt = 0;
+        }
+    }
+    /* flush points as a barrier */
+    void config_flush_barrier(GameState* st, Vector2f* pts, size_t* cnt) {
+        if (*cnt > 0) {
+            track_generate_barrier(pts, (size_t)(*cnt));
+            *cnt = 0;
+        }
+    }
+
+    while (fgets(buf, sizeof(buf), f)) {
+        // trim
+        char* s = buf;
+        while (*s && isspace((unsigned char)*s)) s++;
+        if (*s == '\0' || *s == '#') continue;
+
+        if (strncmp(s, "TRACK", 5) == 0) {
+            config_flush_barrier(state, points, &pointsCount); config_flush_track(state, points, &pointsCount, currentWidth); section = TRACK;
+            // parse width
+            float w = 150.0f; if (sscanf(s+5, "%f", &w) == 1) currentWidth = w;
+            continue;
+        }
+        if (strncmp(s, "BARRIER", 7) == 0) { config_flush_track(state, points, &pointsCount, currentWidth); config_flush_barrier(state, points, &pointsCount); section = BARRIER; continue; }
+        if (strncmp(s, "FINISH", 6) == 0) { float x,y; if (sscanf(s+6, "%f %f", &x, &y) == 2) { Vector2f p={x,y}; track_set_finish(p); } continue; }
+        if (strncmp(s, "SPAWNS", 6) == 0) { section = SPAWNS; pointsCount = 0; continue; }
+        if (strncmp(s, "COINS", 5) == 0) { section = COINS; coinsCount = 0; continue; }
+        if (strncmp(s, "END", 3) == 0) { if (section == TRACK) config_flush_track(state, points, &pointsCount, currentWidth); else if (section == BARRIER) config_flush_barrier(state, points, &pointsCount); else if (section == SPAWNS) { if (pointsCount>0) { track_set_spawns(points); pointsCount=0; } } section = NONE; continue; }
+
+        // parse coordinate line
+        float x,y; if (sscanf(s, "%f %f", &x, &y) != 2) continue;
+        if (section == TRACK || section == BARRIER || section == SPAWNS) {
+            config_push_point(&points, &pointsCap, &pointsCount, x, y);
+        } else if (section == COINS) {
+            if (coinsCount + 1 > coinsCap) { coinsCap = coinsCap ? coinsCap * 2 : 64; coins = realloc(coins, coinsCap * sizeof(Vector2f)); }
+            coins[coinsCount].x = x; coins[coinsCount].y = y; coinsCount++;
+        }
+    }
+
+    // flush remaining
+    if (pointsCount > 0) config_flush_track(state, points, &pointsCount, currentWidth);
+    if (coinsCount > 0) {
+        *outCoins = coins; *outCoinsCount = (int)coinsCount;
+    } else {
+        if (coins) free(coins);
+        *outCoins = NULL; *outCoinsCount = 0;
+    }
+
+    if (points) free(points);
+    fclose(f);
+    return 1;
+}
+
 static Vector2f race_spawn_for_slot(const int slot) {
-    /*const Vector2f spawn = {300.0f + ((float)slot * 90.0f), 450.0f};
-    return spawn;*/
     return track_spawn_points[slot];
 }
 
@@ -93,7 +188,15 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
     state->winner_time = 0;
     state->race_start_ms = 0;
 
-    TrackLoader_loadTrack(TRACK_1);
+    // Try to load configuration from config.txt (if present). If not present, fall back to built-in tracks.
+    // The function will populate the track via track_generate* calls and optionally provide coin positions.
+    Vector2f* configCoins = NULL;
+    int configCoinCount = 0;
+    // Forward-declare loader function (implemented below)
+    int try_load_config(GameState* state, Vector2f** outCoins, int* outCoinsCount);
+    if (!try_load_config(state, &configCoins, &configCoinCount)) {
+        TrackLoader_loadTrack(TRACK_1);
+    }
 
     for (int i = 0; i < MAX_PLAYERS; i++) {
         state->players[i].isActive = 0;
@@ -104,6 +207,57 @@ void game_manager_init(GameState* state, const int listenfd_socket) {
         boat_init(&state->players[i].boat, race_spawn_for_slot(i));
         state->players[i].lastActivityTime = 0;
         memset(&state->players[i].client_addr, 0, sizeof(state->players[i].client_addr));
+    }
+
+    /* Initialize coins. If a config provided coin positions via track.txt (try_load_config),
+       use those positions. Otherwise fall back to the built-in test pattern. */
+    state->coins_bits = 0; /* 0 -> none collected */
+    const float coinRadius = 8.0f;
+
+    if (configCoins != NULL && configCoinCount > 0) {
+        /* Initialize coins from config positions. Fill up to 64 coins; any remaining
+           slots are marked inactive and their bits set so clients treat them as unavailable. */
+        int useCount = configCoinCount;
+        if (useCount > 64) useCount = 64;
+
+        for (int i = 0; i < 64; ++i) {
+            if (i < useCount) {
+                coin_init(&state->coins[i], configCoins[i], coinRadius, i);
+                state->coins[i].cooldown_until_ms = 0;
+                state->coins[i].owner_player_id = -1;
+                /* ensure bit cleared (available) */
+                state->coins_bits &= ~(1ULL << (uint64_t)i);
+            } else {
+                /* mark unused coins as inactive/collected so they don't appear in-game */
+                state->coins[i].position = (Vector2f){0.0f, 0.0f};
+                state->coins[i].radius = coinRadius;
+                state->coins[i].active = 0;
+                state->coins[i].index = i;
+                state->coins[i].cooldown_until_ms = 0;
+                state->coins[i].owner_player_id = -1;
+                state->coins_bits |= (1ULL << (uint64_t)i);
+            }
+        }
+        free(configCoins);
+        configCoins = NULL;
+        configCoinCount = 0;
+    } else {
+        /* Default test pattern: 8 groups of 8 coins near origin */
+        const float groupSpacing = 16.0f;
+        Vector2f offsets[8] = {
+            { -12.f, -12.f }, { 0.f, -16.f }, { 12.f, -12.f }, { 16.f, 0.f },
+            { 12.f, 12.f }, { 0.f, 16.f }, { -12.f, 12.f }, { -16.f, 0.f }
+        };
+
+        for (int g = 0; g < 8; ++g) {
+            Vector2f basePos = { g * groupSpacing, 0.0f };
+            for (int c = 0; c < 8; ++c) {
+                int idx = g * 8 + c;
+                coin_init(&state->coins[idx], (Vector2f){ basePos.x + offsets[c].x, basePos.y + offsets[c].y }, coinRadius, idx);
+                state->coins[idx].cooldown_until_ms = 0;
+                state->coins[idx].owner_player_id = -1;
+            }
+        }
     }
 }
 
@@ -290,22 +444,28 @@ uint32_t game_manager_get_remaining_countdown_ms(GameState* state) {
     return remaining_ms;
 }
 
-void boatCollision(Boat* b1, Boat* b2) {
-    const float minDist = 2.0f * COLLIDER_RADIUS;
-    const float minDistSq = minDist * minDist;
+/* Collision between two players (have access to GameState to modify coins and broadcast) */
+static void playerBoatCollision(GameState* state, Player* p1, Player* p2) {
+    Boat* b1 = &p1->boat;
+    Boat* b2 = &p2->boat;
 
+    const float minDist = 2.0f * COLLIDER_RADIUS;
     const float dx = b2->position.x - b1->position.x;
     const float dy = b2->position.y - b1->position.y;
     const float distSq = (dx * dx) + (dy * dy);
 
-    if (distSq < minDistSq && distSq > 0.0001f) {
+    if (distSq < minDist * minDist && distSq > 0.0001f) {
         const float dist = sqrtf(distSq);
         const float nx = dx / dist;
         const float ny = dy / dist;
 
         const float overlap = minDist - dist;
-        const float pushX = nx * (overlap * 0.5f);
-        const float pushY = ny * (overlap * 0.5f);
+        /* Apply smaller positional correction to avoid teleporting objects on collision.
+           A small fraction keeps objects from interpenetrating while letting velocities
+           resolve collision more naturally over subsequent ticks. */
+        const float positionPushFactor = 0.25f;
+        const float pushX = nx * (overlap * positionPushFactor);
+        const float pushY = ny * (overlap * positionPushFactor);
 
         b1->position.x -= pushX;
         b1->position.y -= pushY;
@@ -319,16 +479,176 @@ void boatCollision(Boat* b1, Boat* b2) {
 
         if (vn > 0.0f) return;
 
-        const float e = 1.0f;
-        const float impulse = -(1.0f + e) * vn * 0.5f;
+        /* Reduce bounciness and smooth velocity change: use smaller restitution
+           and blend the applied impulse so boats don't experience a harsh instant
+           velocity change. Also clamp impulse magnitude to avoid extreme spikes. */
+        const float e = 0.6f; /* restitution (0..1): lower -> less bouncy */
+        const float baseImpulse = -(1.0f + e) * vn * 0.5f;
 
-        const float impulseX = nx * impulse;
-        const float impulseY = ny * impulse;
+        float impulseX = nx * baseImpulse;
+        float impulseY = ny * baseImpulse;
 
-        b1->velocity.x -= impulseX;
-        b1->velocity.y -= impulseY;
-        b2->velocity.x += impulseX;
-        b2->velocity.y += impulseY;
+        /* Clamp impulse magnitude to avoid huge instantaneous velocity jumps */
+        const float MAX_IMPULSE = 300.0f; /* tunable */
+        float impMag = sqrtf(impulseX * impulseX + impulseY * impulseY);
+        if (impMag > MAX_IMPULSE && impMag > 0.0001f) {
+            float scale = MAX_IMPULSE / impMag;
+            impulseX *= scale;
+            impulseY *= scale;
+        }
+
+        /* Blend factor for applying impulse: 1.0 = full immediate change, lower -> smoother */
+        const float velBlend = 0.45f;
+        b1->velocity.x -= impulseX * velBlend;
+        b1->velocity.y -= impulseY * velBlend;
+        b2->velocity.x += impulseX * velBlend;
+        b2->velocity.y += impulseY * velBlend;
+
+        /* Apply a tiny damping so boats don't oscillate violently after collision */
+        const float POST_COLLISION_DAMPING = 0.02f;
+        b1->velocity.x *= (1.0f - POST_COLLISION_DAMPING);
+        b1->velocity.y *= (1.0f - POST_COLLISION_DAMPING);
+        b2->velocity.x *= (1.0f - POST_COLLISION_DAMPING);
+        b2->velocity.y *= (1.0f - POST_COLLISION_DAMPING);
+
+        // Determine normal velocity components for each boat (approx using current velocities)
+        float v1n = (b1->velocity.x * nx) + (b1->velocity.y * ny);
+        float v2n = (b2->velocity.x * nx) + (b2->velocity.y * ny);
+
+        float velocityDifference = fabsf(v1n - v2n);
+
+        // Discrete drop rules
+        const float MIN_DIFF_VELOCITY = 50.0f;   // below -> no drops
+        const float MAX_DIFF_VELOCITY = 500.0f;  // above -> drop half of victim-owned
+        const float STEP = 50.0f;                // 1 coin per STEP above MIN
+        const uint32_t COOLDOWN_MS = 3000;       // respawn cooldown
+
+        if (velocityDifference < MIN_DIFF_VELOCITY) {
+            return; // no drops
+        }
+
+        // Identify attacker and victim by who has larger normal velocity
+        Player* attacker = (v1n > v2n) ? p1 : p2;
+        Player* victim = (v1n > v2n) ? p2 : p1;
+
+        int coinsToDrop = 0;
+        if (velocityDifference >= MAX_DIFF_VELOCITY) {
+            // drop half of victim-owned coins
+            int ownedCount = 0;
+            for (int ci = 0; ci < 64; ++ci) {
+                if (state->coins[ci].owner_player_id == victim->playerId && state->coins[ci].active == 0) {
+                    ownedCount++;
+                }
+            }
+            coinsToDrop = ownedCount / 2;
+        } else {
+            // discrete mapping: floor((diff - MIN)/STEP) + 1
+            float effective = velocityDifference - MIN_DIFF_VELOCITY;
+            coinsToDrop = (int)floorf(effective / STEP) + 1;
+        }
+
+        if (coinsToDrop <= 0) return;
+
+        // Only drop victim-owned collected coins. If victim has none, no drops occur.
+        int victimOwnedCount = 0;
+        for (int ci = 0; ci < 64; ++ci) {
+            if (state->coins[ci].owner_player_id == victim->playerId && state->coins[ci].active == 0) {
+                victimOwnedCount++;
+            }
+        }
+
+        if (victimOwnedCount <= 0) return; // victim has no collected coins -> nothing to drop
+
+        if (coinsToDrop > victimOwnedCount) coinsToDrop = victimOwnedCount;
+
+        uint64_t now = now_ms();
+        int dropped = 0;
+
+        // Respawn only victim-owned coins
+        for (int ci = 0; ci < 64 && dropped < coinsToDrop; ++ci) {
+            Coin* coin = &state->coins[ci];
+            if (coin->owner_player_id == victim->playerId && coin->active == 0) {
+                // respawn coin near collision
+                float angle = ((float)dropped / (float)coinsToDrop) * 6.2831853f + 0.5f;
+                float radius = 20.0f + (dropped * 6.0f);
+                float cx = b1->position.x + cosf(angle) * radius;
+                float cy = b1->position.y + sinf(angle) * radius;
+
+                coin->position.x = cx;
+                coin->position.y = cy;
+                coin->active = 1;
+                coin->owner_player_id = -1;
+                coin->cooldown_until_ms = now + COOLDOWN_MS;
+
+                // clear collected bit
+                state->coins_bits &= ~(1ULL << (uint64_t)coin->index);
+
+                // deduct points from victim
+                victim->boat.points -= 100;
+                if (victim->boat.points < 0) victim->boat.points = 0;
+
+                // notify clients
+                PacketCoinRespawn respkt;
+                respkt.type = MSG_COIN_RESPAWN;
+                respkt.coin_index = coin->index;
+                respkt.x = coin->position.x;
+                respkt.y = coin->position.y;
+                respkt.cooldown_ms = COOLDOWN_MS;
+
+                for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                    if (state->players[pi].isActive) {
+                        sendto(state->listenfd_socket, &respkt, sizeof(respkt), 0,
+                               (struct sockaddr*)&state->players[pi].client_addr,
+                               sizeof(state->players[pi].client_addr));
+                    }
+                }
+
+                dropped++;
+            }
+        }
+
+        if (dropped > 0) {
+            // broadcast updated coins bits
+            PacketCoinsState pkt;
+            pkt.type = MSG_COINS_STATE;
+            pkt.coins_bits = state->coins_bits;
+            for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                if (state->players[pi].isActive) {
+                    sendto(state->listenfd_socket, &pkt, sizeof(pkt), 0,
+                           (struct sockaddr*)&state->players[pi].client_addr,
+                           sizeof(state->players[pi].client_addr));
+                }
+            }
+            // Immediately broadcast updated player states so clients see points changes at once
+            PacketGameState statePkt;
+            statePkt.type = MSG_GAME_STATE;
+            statePkt.active_players_count = 0;
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                if (state->players[i].isActive) {
+                    PlayerSnapshot snap;
+                    snap.player_id = state->players[i].playerId;
+                    snap.x = state->players[i].boat.position.x;
+                    snap.y = state->players[i].boat.position.y;
+                    snap.currentAngle = state->players[i].boat.current_angle;
+                    snap.rotation = state->players[i].boat.rotation;
+                    snap.throttle = state->players[i].boat.throttle;
+                    snap.velocityX = state->players[i].boat.velocity.x;
+                    snap.velocityY = state->players[i].boat.velocity.y;
+                    snap.points = state->players[i].boat.points;
+
+                    statePkt.players[statePkt.active_players_count] = snap;
+                    statePkt.active_players_count++;
+                }
+            }
+
+            for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                if (state->players[pi].isActive) {
+                    sendto(state->listenfd_socket, &statePkt, sizeof(statePkt), 0,
+                           (struct sockaddr*)&state->players[pi].client_addr,
+                           sizeof(state->players[pi].client_addr));
+                }
+            }
+        }
     }
 }
 
@@ -373,7 +693,7 @@ void game_manager_resolve_collisions(GameState* state) {
             if (!state->players[j].isActive) continue;
             if (state->players[j].isFinished) continue;
 
-            boatCollision(&state->players[i].boat, &state->players[j].boat);
+            playerBoatCollision(state, &state->players[i], &state->players[j]);
         }
 
         for (int j = 0; j < track_buoy_count; j++) {
@@ -381,6 +701,44 @@ void game_manager_resolve_collisions(GameState* state) {
             const float buoyRadius = track_buoys[j].radius;
 
             buoyCollision(&state->players[i].boat, buoyPos, buoyRadius);
+        }
+
+        /* Coin collisions */
+        for (int ci = 0; ci < 64; ++ci) {
+            Coin* coin = &state->coins[ci];
+            if (!coin->active) continue;
+
+            const float dx = coin->position.x - state->players[i].boat.position.x;
+            const float dy = coin->position.y - state->players[i].boat.position.y;
+            const float distSq = (dx * dx) + (dy * dy);
+            const float minDist = COLLIDER_RADIUS + coin->radius;
+            if (distSq < minDist * minDist && distSq > 0.0001f) {
+                uint64_t now = now_ms();
+                if (coin->cooldown_until_ms > now) {
+                    // coin is on cooldown, ignore collection
+                    continue;
+                }
+
+                /* collect coin */
+                coin->active = 0;
+                coin->owner_player_id = state->players[i].playerId; // set owner on collection
+                state->coins_bits |= (1ULL << (uint64_t)coin->index);
+
+                /* increase player's points */
+                state->players[i].boat.points += 100; /* coin value */
+
+                /* broadcast updated coins state to all players (we are already locked here) */
+                PacketCoinsState pkt;
+                pkt.type = MSG_COINS_STATE;
+                pkt.coins_bits = state->coins_bits;
+                for (int pi = 0; pi < MAX_PLAYERS; ++pi) {
+                    if (state->players[pi].isActive) {
+                        sendto(state->listenfd_socket, &pkt, sizeof(pkt), 0,
+                               (struct sockaddr*)&state->players[pi].client_addr,
+                               sizeof(state->players[pi].client_addr));
+                    }
+                }
+            }
         }
     }
 }

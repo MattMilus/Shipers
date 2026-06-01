@@ -26,6 +26,9 @@ enum {
     MSG_MOVE = 102,
     MSG_PLAYER_FINISHED = 103,
 
+    MSG_COINS_STATE = 200,
+    MSG_COIN_RESPAWN = 201,
+
     MSG_I_AM_ALIVE = 999
 };
 
@@ -148,6 +151,19 @@ typedef struct {
     MessageType type;
     int player_id;
 } PacketIAmAlive;
+
+typedef struct {
+    MessageType type;
+    uint64_t coins_bits;
+} PacketCoinsState;
+
+typedef struct {
+    MessageType type;
+    int coin_index;
+    float x;
+    float y;
+    uint32_t cooldown_ms; // duration of cooldown in ms
+} PacketCoinRespawn;
 
 #pragma pack(pop)
 

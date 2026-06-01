@@ -40,6 +40,13 @@ private:
     sf::RenderTexture renderTex;
     sf::RectangleShape screenQuad;
 
+    // Current camera zoom applied to both shader sampling and SFML-drawn objects
+    float cameraZoom = 1.0f;
+    // Last render time in seconds (used to compute smoothing delta)
+    float lastRenderTime = -1.0f;
+    // Time constant for zoom smoothing (seconds). Smaller = snappier, larger = smoother.
+    float zoomSmoothTau = 0.08f;
+
     std::vector<Panel> panels;
     std::function<void(sf::RenderWindow&)> overlayDrawer;
 

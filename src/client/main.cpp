@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Window/Clipboard.hpp>
 #include <cstdio>
 #include <iostream>
 #include <optional>
@@ -142,6 +143,8 @@ int main() {
         }
 
         if (gameManager->isConnectedToServer() && gameManager->getSessionPhase() == SessionPhase::Race) {
+            // Draw a small live scoreboard in the top-right corner during the race
+            scoreboard.drawLive(renderWindow, uiFont, gameManager->getPlayerId());
             return;
         }
 
@@ -297,6 +300,22 @@ int main() {
                         serverIpField.handleTextEntered(textEntered->unicode);
                     } else if (nicknameField.isFocused()) {
                         nicknameField.handleTextEntered(textEntered->unicode);
+                    }
+                }
+            }
+
+            if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+                // Handle Ctrl+V paste into focused text fields in lobby overlay
+                if ((keyPressed->control) && keyPressed->code == sf::Keyboard::Key::V) {
+                    if (showLobbyOverlay && !gameManager->isConnectedToServer()) {
+                        const sf::String clip = sf::Clipboard::getString();
+                        const std::string pasted = clip.toAnsiString();
+
+                        if (serverIpField.isFocused()) {
+                            serverIpField.setValue(serverIpField.getValue() + pasted);
+                        } else if (nicknameField.isFocused()) {
+                            nicknameField.setValue(nicknameField.getValue() + pasted);
+                        }
                     }
                 }
             }

@@ -18,6 +18,86 @@ EndGameScoreboard::EndGameScoreboard() {
     btnPlayAgain.setOutlineThickness(2.0f);
 }
 
+void EndGameScoreboard::drawLive(sf::RenderWindow& renderWindow, const sf::Font& uiFont, uint32_t localPlayerId) {
+    const sf::Vector2f windowSize(
+        static_cast<float>(renderWindow.getSize().x),
+        static_cast<float>(renderWindow.getSize().y)
+    );
+
+    const float boxWidth = 320.0f;
+    const float margin = 16.0f;
+    const float headerHeight = 28.0f;
+    const float rowHeight = 22.0f;
+    const size_t maxRows = 6;
+    const size_t rows = std::min(scores.size(), maxRows);
+
+    const float boxHeight = headerHeight + rows * (rowHeight + 6.0f) + 12.0f;
+    sf::Vector2f boxPos(windowSize.x - boxWidth - margin, margin);
+
+    sf::RectangleShape box({boxWidth, boxHeight});
+    box.setPosition(boxPos);
+    // Match main menu / end score styling: darker overlay with subtle outline
+    box.setFillColor(sf::Color(9, 18, 30, 200));
+    box.setOutlineColor(sf::Color(214, 227, 247, 200));
+    box.setOutlineThickness(2.0f);
+    renderWindow.draw(box);
+
+    // small title band to match EndGame title band
+    sf::RectangleShape titleBand({boxWidth, headerHeight});
+    titleBand.setPosition(boxPos);
+    titleBand.setFillColor(sf::Color(20, 44, 70, 235));
+    renderWindow.draw(titleBand);
+
+    // Title
+    sf::Text title(uiFont);
+    title.setCharacterSize(16);
+    title.setFillColor(sf::Color::White);
+    title.setString("Aktualna punktacja");
+    title.setPosition({boxPos.x + 12.0f, boxPos.y + 4.0f});
+    renderWindow.draw(title);
+
+    auto drawSmallText = [&](const std::string& s, float x, float y, sf::Color color = sf::Color(200,200,200)) {
+        sf::Text t(uiFont);
+        t.setCharacterSize(14);
+        t.setFillColor(color);
+        t.setString(s);
+        t.setPosition({x, y});
+        renderWindow.draw(t);
+    };
+
+    float startY = boxPos.y + headerHeight + 8.0f;
+    for (size_t i = 0; i < rows; ++i) {
+        const auto& sc = scores[i];
+        bool isLocal = (sc.id == (int)localPlayerId);
+
+        float y = startY + static_cast<float>(i) * (rowHeight + 6.0f);
+
+        // draw row background for local player to highlight
+        if (isLocal) {
+            sf::RectangleShape rowBg({boxWidth - 12.0f, rowHeight});
+            rowBg.setPosition({boxPos.x + 6.0f, y - 2.0f});
+            rowBg.setFillColor(sf::Color(255, 235, 153, 200));
+            rowBg.setOutlineColor(sf::Color(255, 204, 0, 200));
+            rowBg.setOutlineThickness(1.0f);
+            renderWindow.draw(rowBg);
+        }
+
+        sf::Color textColor = isLocal ? sf::Color(20, 35, 55) : sf::Color(220, 220, 220);
+
+        // place
+        drawSmallText(std::to_string(i + 1), boxPos.x + 10.0f, y, textColor);
+
+        // nick
+        std::string nick = sc.nickname;
+        if (isLocal) nick += " (you)";
+        drawSmallText(nick, boxPos.x + 36.0f, y, textColor);
+
+        // coins and total
+        drawSmallText(std::to_string(sc.coins), boxPos.x + boxWidth - 140.0f, y, textColor);
+        drawSmallText(std::to_string(sc.totalScore), boxPos.x + boxWidth - 60.0f, y, sf::Color(160,40,40));
+    }
+}
+
 void EndGameScoreboard::setCallbacks(std::function<void()> onExit, std::function<void()> onPlayAgain) {
     onExitCallback = std::move(onExit);
     onPlayAgainCallback = std::move(onPlayAgain);

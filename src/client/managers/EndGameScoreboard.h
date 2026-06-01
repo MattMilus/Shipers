@@ -40,6 +40,8 @@ public:
     void handleMouseClick(const sf::Vector2f& mousePos) const;
     bool containsMouse(const sf::Vector2f& mousePos) const;
     void draw(sf::RenderWindow& renderWindow, const sf::Font& uiFont, uint32_t localPlayerId);
+    // Draw a small live scoreboard in the top-right corner (non-obtrusive)
+    void drawLive(sf::RenderWindow& renderWindow, const sf::Font& uiFont, uint32_t localPlayerId);
 };
 
 
